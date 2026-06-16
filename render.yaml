@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bioprocess-data-logging
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false   # set manually in Render Dashboard
+      - key: PORT
+        value: 5000

@@ -1,0 +1,10 @@
+{
+  "machines": [
+    {
+      "id": "m1",
+      "name": "Bioreactor 1"
+    }
+  ],
+  "jobs": [],
+  "customers": []
+}
