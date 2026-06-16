@@ -5,6 +5,71 @@
       "name": "Bioreactor 1"
     }
   ],
-  "jobs": [],
-  "customers": []
+  "jobs": [
+    {
+      "id": "job-001",
+      "machineId": "m1",
+      "name": "ทดลองเก็บข้อมูล Batch 1",
+      "createdAt": "2024-12-01 10:00",
+      "data": [
+        {
+          "timestamp": "2024-12-01T10:00:00.000Z",
+          "date": "2024-12-01",
+          "time": "10:00",
+          "temp_set": 37.0,
+          "temp_read": 37.5,
+          "ph_set": 7.0,
+          "ph_read": 7.2,
+          "do_set": 80,
+          "do_read": 85,
+          "agit_set": 200,
+          "agit_read": 200,
+          "air_set": 2.0,
+          "air_read": 2.0,
+          "remark": "เริ่มต้นการทดลอง"
+        },
+        {
+          "timestamp": "2024-12-01T11:00:00.000Z",
+          "date": "2024-12-01",
+          "time": "11:00",
+          "temp_set": 37.0,
+          "temp_read": 37.6,
+          "ph_set": 7.0,
+          "ph_read": 7.1,
+          "do_set": 80,
+          "do_read": 88,
+          "agit_set": 200,
+          "agit_read": 200,
+          "air_set": 2.0,
+          "air_read": 2.1,
+          "remark": "ต่อเนื่องปกติ"
+        },
+        {
+          "timestamp": "2024-12-01T12:00:00.000Z",
+          "date": "2024-12-01",
+          "time": "12:00",
+          "temp_set": 37.0,
+          "temp_read": 37.5,
+          "ph_set": 7.0,
+          "ph_read": 7.2,
+          "do_set": 80,
+          "do_read": 86,
+          "agit_set": 200,
+          "agit_read": 200,
+          "air_set": 2.0,
+          "air_read": 2.0,
+          "remark": "ข้อมูลคงที่"
+        }
+      ]
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust-001",
+      "companyName": "บริษัท BioPro",
+      "machineId": "m1",
+      "email": "info@biopro.com",
+      "createdAt": "2024-12-01 09:00"
+    }
+  ]
 }

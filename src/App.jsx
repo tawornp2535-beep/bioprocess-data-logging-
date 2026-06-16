@@ -19,7 +19,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         <p className="custom-tooltip-label">{label}</p>
         {payload.map((entry, index) => (
           <p key={index} style={{ color: entry.color, margin: 0, fontSize: '14px', fontWeight: 600 }}>
-            {entry.name}: {entry.value.toFixed(2)}
+            {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value || '-'}
           </p>
         ))}
       </div>
@@ -1396,10 +1396,10 @@ function App() {
                       <div className="metric-title">Temperature</div>
                       <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div className="metric-value" style={{ color: 'var(--accent-red)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {(lastDataPoint.temp_read !== undefined ? lastDataPoint.temp_read : lastDataPoint.temp).toFixed(1)}<span className="metric-unit">°C</span>
+                          {typeof (lastDataPoint.temp_read !== undefined ? lastDataPoint.temp_read : lastDataPoint?.temp) === 'number' ? ((lastDataPoint.temp_read !== undefined ? lastDataPoint.temp_read : lastDataPoint?.temp) || 0).toFixed(1) : '-'}<span className="metric-unit">°C</span>
                         </div>
                         <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {(lastDataPoint.temp_set !== undefined ? lastDataPoint.temp_set : lastDataPoint.temp).toFixed(1)}°C
+                          SV (Set): {typeof (lastDataPoint.temp_set !== undefined ? lastDataPoint.temp_set : lastDataPoint?.temp) === 'number' ? ((lastDataPoint.temp_set !== undefined ? lastDataPoint.temp_set : lastDataPoint?.temp) || 0).toFixed(1) : '-'}°C
                         </div>
                       </div>
                     </div>
@@ -1408,10 +1408,10 @@ function App() {
                       <div className="metric-title">pH Level</div>
                       <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div className="metric-value" style={{ color: 'var(--accent-blue)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {(lastDataPoint.ph_read !== undefined ? lastDataPoint.ph_read : lastDataPoint.ph).toFixed(2)}
+                          {typeof (lastDataPoint.ph_read !== undefined ? lastDataPoint.ph_read : lastDataPoint?.ph) === 'number' ? ((lastDataPoint.ph_read !== undefined ? lastDataPoint.ph_read : lastDataPoint?.ph) || 0).toFixed(2) : '-'}
                         </div>
                         <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {(lastDataPoint.ph_set !== undefined ? lastDataPoint.ph_set : lastDataPoint.ph).toFixed(2)}
+                          SV (Set): {typeof (lastDataPoint.ph_set !== undefined ? lastDataPoint.ph_set : lastDataPoint?.ph) === 'number' ? ((lastDataPoint.ph_set !== undefined ? lastDataPoint.ph_set : lastDataPoint?.ph) || 0).toFixed(2) : '-'}
                         </div>
                       </div>
                     </div>
@@ -1444,10 +1444,10 @@ function App() {
                       <div className="metric-title">Air Flow</div>
                       <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div className="metric-value" style={{ color: 'var(--accent-purple)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {(lastDataPoint.air_read !== undefined ? lastDataPoint.air_read : lastDataPoint.air).toFixed(1)}<span className="metric-unit">L/M</span>
+                          {typeof (lastDataPoint.air_read !== undefined ? lastDataPoint.air_read : lastDataPoint?.air) === 'number' ? ((lastDataPoint.air_read !== undefined ? lastDataPoint.air_read : lastDataPoint?.air) || 0).toFixed(1) : '-'}<span className="metric-unit">L/M</span>
                         </div>
                         <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {(lastDataPoint.air_set !== undefined ? lastDataPoint.air_set : lastDataPoint.air).toFixed(1)} L/M
+                          SV (Set): {typeof (lastDataPoint.air_set !== undefined ? lastDataPoint.air_set : lastDataPoint?.air) === 'number' ? ((lastDataPoint.air_set !== undefined ? lastDataPoint.air_set : lastDataPoint?.air) || 0).toFixed(1) : '-'} L/M
                         </div>
                       </div>
                     </div>
@@ -1660,16 +1660,16 @@ function App() {
                           <tr key={index}>
                             <td style={{ textAlign: 'center' }}>{row.date || (row.timestamp ? (new Date(row.timestamp).toISOString().slice(0,10)) : '')}</td>
                             <td style={{ textAlign: 'center' }}>{row.time || (row.timestamp ? (new Date(row.timestamp).toTimeString().slice(0,5)) : '')}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.temp_set.toFixed(1)}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--accent-red)', fontWeight: 600 }}>{row.temp_read.toFixed(1)}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.ph_set.toFixed(2)}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--accent-blue)', fontWeight: 600 }}>{row.ph_read.toFixed(2)}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.do_set}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{row.do_read}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.agit_set}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--accent-yellow)', fontWeight: 600 }}>{row.agit_read}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.air_set.toFixed(1)}</td>
-                            <td style={{ textAlign: 'center', color: 'var(--accent-purple)', fontWeight: 600 }}>{row.air_read.toFixed(1)}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.temp_set === 'number' ? row.temp_set.toFixed(1) : '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--accent-red)', fontWeight: 600 }}>{typeof row.temp_read === 'number' ? row.temp_read.toFixed(1) : '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.ph_set === 'number' ? row.ph_set.toFixed(2) : '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--accent-blue)', fontWeight: 600 }}>{typeof row.ph_read === 'number' ? row.ph_read.toFixed(2) : '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.do_set || '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{row.do_read || '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.agit_set || '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--accent-yellow)', fontWeight: 600 }}>{row.agit_read || '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.air_set === 'number' ? row.air_set.toFixed(1) : '-'}</td>
+                            <td style={{ textAlign: 'center', color: 'var(--accent-purple)', fontWeight: 600 }}>{typeof row.air_read === 'number' ? row.air_read.toFixed(1) : '-'}</td>
                             <td style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{row.remark || '-'}</td>
                             {userRole === 'admin' && (
                               <td style={{ textAlign: 'center' }}>
