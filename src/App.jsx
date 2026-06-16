@@ -765,7 +765,7 @@ function App() {
     return (
       <div className="login-overlay">
         <div className="glass-panel login-card" style={{ maxWidth: '450px', width: '95%', padding: '2.5rem', margin: 'auto' }}>
-          <h1 style={{ textAlign: 'center', marginBottom: '0.5rem', background: 'linear-gradient(to right, var(--accent-blue), var(--accent-purple))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700 }}>Bioprocess System</h1>
+          <h1 style={{ textAlign: 'center', marginBottom: '0.5rem', background: 'linear-gradient(to right, var(--accent-blue), var(--accent-purple))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700 }}>DBMS</h1>
           <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>เครื่องมือบันทึกและจัดเก็บข้อมูล</p>
 
           {/* PWA Install Button */}
@@ -1019,7 +1019,7 @@ function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <ActivityIcon size={28} style={{ color: '#00f0ff', filter: 'drop-shadow(0 0 6px rgba(0, 240, 255, 0.5))' }} />
               <div>
-                <div className="sidebar-logo-text">BIOPROCESS</div>
+                <div className="sidebar-logo-text">DBMS</div>
                 <div className="sidebar-logo-subtext">SYSTEM ULTRA</div>
               </div>
             </div>
