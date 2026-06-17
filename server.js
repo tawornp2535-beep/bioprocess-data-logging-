@@ -245,8 +245,41 @@ const saveSettings = async (settings) => {
 // API Routes
 // ──────────────────────────────────────────────────────────
 
+// In-memory active users tracker
+const activeUsers = {};
+
 app.get('/api/db', async (req, res) => {
-  res.json(await getDB());
+  const { clientId, role, machineId, jobId } = req.query;
+  
+  if (clientId) {
+    activeUsers[clientId] = {
+      role: role || 'guest',
+      machineId: machineId || '',
+      jobId: jobId || '',
+      lastActive: Date.now()
+    };
+  }
+
+  // Clean up users who haven't sent a heartbeat/poll in 12 seconds
+  const now = Date.now();
+  for (const cid in activeUsers) {
+    if (now - activeUsers[cid].lastActive > 12000) {
+      delete activeUsers[cid];
+    }
+  }
+
+  const activeUsersList = Object.entries(activeUsers).map(([cid, u]) => ({
+    clientId: cid,
+    role: u.role,
+    machineId: u.machineId,
+    jobId: u.jobId
+  }));
+
+  const dbData = await getDB();
+  res.json({
+    ...dbData,
+    activeUsers: activeUsersList
+  });
 });
 
 // ── Settings ─────────────────────────────────────────────

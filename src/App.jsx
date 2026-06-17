@@ -118,6 +118,22 @@ function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  // Unique client ID for active users status tracking
+  const [clientId] = useState(() => {
+    let id = sessionStorage.getItem('bioprocess-client-id');
+    if (!id) {
+      id = 'client-' + Math.random().toString(36).substring(2, 11);
+      try {
+        sessionStorage.setItem('bioprocess-client-id', id);
+      } catch (e) {
+        // ignore storage errors
+      }
+    }
+    return id;
+  });
+
+  const [activeUsers, setActiveUsers] = useState([]);
+
   useEffect(() => {
     const checkStandalone = window.navigator.standalone === true || 
                             window.matchMedia('(display-mode: standalone)').matches;
@@ -221,12 +237,22 @@ function App() {
   // Fetch Database from Backend Helper
   const fetchDB = async (shouldAutoSelect = false) => {
     try {
-      const res = await fetch('/api/db');
+      const role = userRole || 'guest';
+      const params = new URLSearchParams({
+        clientId,
+        role,
+        machineId: currentMachineId || '',
+        jobId: currentJobId || ''
+      });
+      const res = await fetch(`/api/db?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setMachines(data.machines);
         setJobs(data.jobs);
         setCustomers(data.customers);
+        if (data.activeUsers) {
+          setActiveUsers(data.activeUsers);
+        }
         
         if (shouldAutoSelect) {
           const savedMachineId = localStorage.getItem('bioprocess-current-machine');
@@ -251,7 +277,14 @@ function App() {
 
   const handleAutoCustomerLogin = async (jobCode) => {
     try {
-      const res = await fetch('/api/db');
+      const role = userRole || 'guest';
+      const params = new URLSearchParams({
+        clientId,
+        role,
+        machineId: currentMachineId || '',
+        jobId: jobCode
+      });
+      const res = await fetch(`/api/db?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         const targetJob = data.jobs.find(j => j.id === jobCode);
@@ -270,6 +303,9 @@ function App() {
         setMachines(data.machines);
         setJobs(data.jobs);
         setCustomers(data.customers);
+        if (data.activeUsers) {
+          setActiveUsers(data.activeUsers);
+        }
 
         const ack = localStorage.getItem('bioprocess-customer-notice-ack') === 'true';
         if (ack) {
@@ -303,7 +339,7 @@ function App() {
       fetchDB(false);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentMachineId, currentJobId, userRole]);
 
   // Active Customer Session Expiry Check
   useEffect(() => {
@@ -1377,6 +1413,37 @@ function App() {
         <div className="sidebar-menu">
           {userRole === 'admin' ? (
             <>
+              {/* Active Users Status Component */}
+              <div className="sidebar-active-users" style={{ padding: '0 1.25rem 1rem 1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#84b2bc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem', fontWeight: 700 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} className="status-dot"></span>
+                  ผู้ใช้งานออนไลน์ ({activeUsers.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {activeUsers.map((u, i) => {
+                    const isSelf = u.clientId === clientId;
+                    const mName = machines.find(m => m.id === u.machineId)?.name || '';
+                    const jName = jobs.find(j => j.id === u.jobId)?.name || '';
+                    return (
+                      <div key={u.clientId || i} style={{ fontSize: '0.8rem', padding: '6px 8px', borderRadius: '6px', background: isSelf ? 'rgba(0, 240, 255, 0.03)' : 'rgba(255, 255, 255, 0.02)', border: isSelf ? '1px solid rgba(0, 240, 255, 0.15)' : '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: isSelf ? '#00f0ff' : 'var(--text-primary)' }}>
+                          <span>
+                            {u.role === 'admin' ? '🔐 แอดมิน' : '👥 ลูกค้า'}
+                            {isSelf && ' (คุณ)'}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 600 }}>Active</span>
+                        </div>
+                        {(mName || jName) && (
+                          <div style={{ fontSize: '0.7rem', color: '#84b2bc', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            กำลังดู: {mName} {jName && `› ${jName}`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Category: Monitoring */}
               <div className="sidebar-menu-header">Monitoring</div>
 
