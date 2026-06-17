@@ -7,7 +7,7 @@ echo --------------------------------------------------
 echo.
 
 REM Open the web browser
-start "" "http://bioprocess.local:5173/"
+start "" "http://localhost:5174/"
 
 REM Run the dev server
 npm run dev
