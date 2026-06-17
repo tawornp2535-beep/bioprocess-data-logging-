@@ -244,6 +244,10 @@ function App() {
   const [showCustomerShareModal, setShowCustomerShareModal] = useState(false);
   const [shareModalJobId, setShareModalJobId] = useState(null);
 
+  const [showAddSessionModal, setShowAddSessionModal] = useState(false);
+  const [newSessionName, setNewSessionName] = useState('');
+  const [newSessionMachineId, setNewSessionMachineId] = useState('');
+
   // Fetch Database from Backend Helper
   const fetchDB = async (shouldAutoSelect = false) => {
     try {
@@ -711,29 +715,48 @@ function App() {
     }
   };
 
-  const createNewJob = async () => {
+  const createNewJob = () => {
     if (!currentMachineId) return alert("Please select or create a machine first.");
-    const jobName = prompt("Enter a name for the new session:", `Session ${jobsForMachine.length + 1}`);
-    if (jobName && jobName.trim()) {
-      try {
-        const res = await fetch('/api/jobs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ machineId: currentMachineId, name: jobName.trim() })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          applyDBUpdate(data);
-          
-          const newJob = data.jobs.find(j => j.machineId === currentMachineId && j.name === jobName.trim());
-          if (newJob) {
-            setCurrentJobId(newJob.id);
+    setNewSessionName(`Session ${jobsForMachine.length + 1}`);
+    setNewSessionMachineId(currentMachineId);
+    setShowAddSessionModal(true);
+  };
+
+  const submitNewJob = async (e) => {
+    if (e) e.preventDefault();
+    if (!newSessionName.trim()) {
+      alert("กรุณากรอกชื่อรอบบันทึก");
+      return;
+    }
+    if (!newSessionMachineId) {
+      alert("กรุณาเลือกเครื่องมือ");
+      return;
+    }
+    try {
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ machineId: newSessionMachineId, name: newSessionName.trim() })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        applyDBUpdate(data);
+        
+        const newJob = data.jobs.find(j => j.machineId === newSessionMachineId && j.name === newSessionName.trim());
+        if (newJob) {
+          if (newSessionMachineId !== currentMachineId) {
+            setCurrentMachineId(newSessionMachineId);
           }
-          // Auto mode removed
+          setCurrentJobId(newJob.id);
         }
-      } catch (err) {
-        console.error(err);
+        setShowAddSessionModal(false);
+        setNewSessionName('');
+      } else {
+        alert("ไม่สามารถสร้างงานใหม่ได้ กรุณาลองใหม่อีกครั้ง");
       }
+    } catch (err) {
+      console.error("Error creating job:", err);
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
   };
 
@@ -3309,6 +3332,83 @@ function App() {
                 </div>
               );
             })()}
+
+          </div>
+        </div>
+      )}
+
+      {/* Glassmorphic Add New Session Modal */}
+      {showAddSessionModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddSessionModal(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h3>
+                <FolderPlus size={22} color="var(--accent-blue)" />
+                สร้างรอบบันทึกข้อมูลใหม่ (Add New Session)
+              </h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowAddSessionModal(false)}
+                title="ปิด"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={submitNewJob} className="modal-body" style={{ margin: 0 }}>
+              
+              {/* Instrument Selection */}
+              <div>
+                <label className="modal-label">🖥️ เครื่องมือ / อุปกรณ์ (Instrument / Machine)</label>
+                <select 
+                  value={newSessionMachineId} 
+                  onChange={(e) => setNewSessionMachineId(e.target.value)}
+                  className="modal-input"
+                  style={{ width: '100%', padding: '10px', height: '42px', backgroundImage: 'none' }}
+                >
+                  {machines.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Session Name Input */}
+              <div>
+                <label className="modal-label">📝 ชื่อรอบบันทึกข้อมูล (Session Name)</label>
+                <input 
+                  type="text" 
+                  value={newSessionName} 
+                  onChange={(e) => setNewSessionName(e.target.value)}
+                  placeholder="เช่น Session 1 หรือ Batch-01" 
+                  className="modal-input"
+                  required
+                  style={{ width: '100%', padding: '10px' }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                <button 
+                  type="button" 
+                  className="submit-btn" 
+                  style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', margin: 0 }}
+                  onClick={() => setShowAddSessionModal(false)}
+                >
+                  ยกเลิก (Cancel)
+                </button>
+                <button 
+                  type="submit" 
+                  className="submit-btn" 
+                  style={{ background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)', border: 'none', color: '#fff', margin: 0 }}
+                >
+                  สร้างรอบบันทึก (Create)
+                </button>
+              </div>
+
+            </form>
 
           </div>
         </div>
