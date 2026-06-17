@@ -27,37 +27,62 @@ const normalizeTimeHHMM = (input) => {
     if (m) return `${pad2(parseInt(m[1], 10))}:${pad2(parseInt(m[2], 10))}`;
   }
   if (input instanceof Date) {
-    return `${pad2(input.getHours())}:${pad2(input.getMinutes())}`;
+    // Offset by +7 hours to get ICT time
+    const ictTime = new Date(input.getTime() + 7 * 60 * 60 * 1000);
+    return `${pad2(ictTime.getUTCHours())}:${pad2(ictTime.getUTCMinutes())}`;
   }
   return null;
+};
+
+// Helper to parse date (YYYY-MM-DD) and time (HH:MM) in ICT (UTC+7) timezone
+const parseICTDateTime = (dateStr, timeStr) => {
+  let year, month, day, hh = 0, mm = 0;
+
+  if (dateStr) {
+    const dParts = dateStr.split('-');
+    if (dParts.length === 3) {
+      year = parseInt(dParts[0], 10);
+      month = parseInt(dParts[1], 10) - 1;
+      day = parseInt(dParts[2], 10);
+    }
+  }
+
+  // If no valid date was parsed, use "today" in ICT
+  if (year === undefined) {
+    const ictNow = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    year = ictNow.getUTCFullYear();
+    month = ictNow.getUTCMonth();
+    day = ictNow.getUTCDate();
+  }
+
+  if (timeStr) {
+    const tParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if (tParts) {
+      hh = parseInt(tParts[1], 10);
+      mm = parseInt(tParts[2], 10);
+    }
+  }
+
+  const utcMs = Date.UTC(year, month, day, hh, mm, 0) - (7 * 60 * 60 * 1000);
+  return new Date(utcMs);
 };
 
 // Helper: normalize date+time (or timestamp string) to ISO datetime
 const normalizeDateTime = (dateInput, timeInput) => {
   // If a full timestamp string provided
   if (dateInput && typeof dateInput === 'string' && timeInput === undefined) {
-    const d = new Date(dateInput);
+    if (dateInput.includes('T') && (dateInput.endsWith('Z') || dateInput.includes('+') || dateInput.includes('-'))) {
+      const d = new Date(dateInput);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    const d = parseICTDateTime(dateInput, undefined);
     if (!isNaN(d.getTime())) return d.toISOString();
   }
 
-  // If separate date and time provided
-  if (dateInput && timeInput && typeof dateInput === 'string' && typeof timeInput === 'string') {
-    const dt = new Date(`${dateInput}T${timeInput}`);
-    if (!isNaN(dt.getTime())) return dt.toISOString();
-    const dt2 = new Date(`${dateInput} ${timeInput}`);
-    if (!isNaN(dt2.getTime())) return dt2.toISOString();
-  }
-
-  // If timeInput alone given (assume today)
-  if (timeInput && typeof timeInput === 'string' && !dateInput) {
-    const today = new Date();
-    const parts = timeInput.match(/(\d{1,2}):(\d{2})/);
-    if (parts) {
-      const hh = parseInt(parts[1], 10);
-      const mm = parseInt(parts[2], 10);
-      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hh, mm);
-      return d.toISOString();
-    }
+  // If separate date and time provided (or time alone)
+  if (dateInput || timeInput) {
+    const d = parseICTDateTime(dateInput, timeInput);
+    if (!isNaN(d.getTime())) return d.toISOString();
   }
 
   return null;
@@ -188,8 +213,9 @@ const migrateDataPoints = (jobs) => {
               const day = parseInt(dateParts[2], 10);
               const hours = parseInt(timeParts[0], 10);
               const minutes = parseInt(timeParts[1], 10);
-              // Construct correctly in local time
-              const localDate = new Date(year, month, day, hours, minutes, 0);
+              // Construct correctly in ICT (UTC+7) local time
+              const utcMs = Date.UTC(year, month, day, hours, minutes, 0) - (7 * 60 * 60 * 1000);
+              const localDate = new Date(utcMs);
               if (!isNaN(localDate.getTime())) {
                 row.timestamp = localDate.toISOString();
                 migrated = true;
