@@ -20,8 +20,22 @@ const getElapsedHours = (job, dataPointTimestamp) => {
   
   let startTimeMs = null;
   
-  // Find the earliest timestamp among all data points in this job
-  if (job.data && job.data.length > 0) {
+  // Prioritize session creation timestamp (from job.id or job.createdAt) as the true start time
+  if (job.id && typeof job.id === 'string' && job.id.startsWith('job-')) {
+    const idNum = parseInt(job.id.replace('job-', ''), 10);
+    if (!isNaN(idNum)) {
+      startTimeMs = idNum;
+    }
+  }
+  if (!startTimeMs && job.createdAt) {
+    const d = new Date(job.createdAt);
+    if (!isNaN(d.getTime())) {
+      startTimeMs = d.getTime();
+    }
+  }
+  
+  // Fallback to the earliest data point timestamp if session creation time is not available
+  if (!startTimeMs && job.data && job.data.length > 0) {
     let minTimeMs = Infinity;
     job.data.forEach(row => {
       if (row.timestamp) {
@@ -33,22 +47,6 @@ const getElapsedHours = (job, dataPointTimestamp) => {
     });
     if (minTimeMs !== Infinity) {
       startTimeMs = minTimeMs;
-    }
-  }
-  
-  // Fallback to Job ID or Job creation time if no data points have valid timestamps
-  if (!startTimeMs) {
-    if (job.id && typeof job.id === 'string' && job.id.startsWith('job-')) {
-      const idNum = parseInt(job.id.replace('job-', ''), 10);
-      if (!isNaN(idNum)) {
-        startTimeMs = idNum;
-      }
-    }
-    if (!startTimeMs && job.createdAt) {
-      const d = new Date(job.createdAt);
-      if (!isNaN(d.getTime())) {
-        startTimeMs = d.getTime();
-      }
     }
   }
   
