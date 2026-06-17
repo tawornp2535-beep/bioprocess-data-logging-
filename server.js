@@ -653,7 +653,7 @@ const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
 // Fallback for SPA routing: send index.html for non-API requests
-app.get(/^(.*)$/, (req, res, next) => {
+app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) {
     return next();
   }
