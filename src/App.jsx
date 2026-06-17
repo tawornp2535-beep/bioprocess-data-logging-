@@ -208,6 +208,12 @@ function App() {
   const [replayIndex, setReplayIndex] = useState(1);
   const [replaySpeed, setReplaySpeed] = useState(1500); // default speed (1x = 1.5s per point)
 
+  // Combined Jobs view states
+  const [combinedActiveTab, setCombinedActiveTab] = useState('list'); // 'list' | 'compare'
+  const [selectedCompareJobIds, setSelectedCompareJobIds] = useState([]);
+  const [compareParam, setCompareParam] = useState('temp_read');
+  const [combinedSearchQuery, setCombinedSearchQuery] = useState('');
+
   const [formData, setFormData] = useState({
     temp_set: 38.0, temp_read: 38.0,
     ph_set: 7.00, ph_read: 7.00,
@@ -1514,6 +1520,20 @@ function App() {
                 </span>
               </div>
 
+              {/* Menu Combined Jobs */}
+              <div 
+                className={`sidebar-menu-item ${currentAppView === 'combined_jobs' ? 'active' : ''}`}
+                onClick={() => {
+                  setCurrentAppView('combined_jobs');
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <span className="sidebar-menu-link">
+                  <Database size={18} />
+                  ข้อมูลงานรวม (Combined)
+                </span>
+              </div>
+
               {/* Instrument Accordion */}
               <div 
                 className="sidebar-menu-item"
@@ -1899,6 +1919,312 @@ function App() {
                 </table>
               </div>
             </div>
+          </div>
+        ) : currentAppView === 'combined_jobs' ? (
+          /* COMBINED JOBS VIEW */
+          <div className="combined-jobs-view">
+            <header className="dashboard-header" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2>ข้อมูลงานรวม (Combined Session Analyzer)</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
+                  รายงานสรุปรอบการรันและเปรียบเทียบแนวโน้มระหว่างรอบการทดลองทั้งหมด
+                </p>
+              </div>
+
+              {/* Tab Selector */}
+              <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.3)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <button 
+                  className={`nav-tab ${combinedActiveTab === 'list' ? 'active' : ''}`}
+                  onClick={() => setCombinedActiveTab('list')}
+                  style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+                >
+                  ตารางงานทั้งหมด ({jobs.length})
+                </button>
+                <button 
+                  className={`nav-tab ${combinedActiveTab === 'compare' ? 'active' : ''}`}
+                  onClick={() => setCombinedActiveTab('compare')}
+                  style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+                >
+                  วิเคราะห์เปรียบเทียบกราฟ
+                </button>
+              </div>
+            </header>
+
+            {combinedActiveTab === 'list' ? (
+              /* TAB 1: ALL SESSIONS LIST */
+              <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', gap: '1rem', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>รายการรอบบันทึกทั้งหมด</h3>
+                  
+                  {/* Search Box */}
+                  <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="ค้นหาเครื่องมือ หรือชื่อรอบบันทึก..." 
+                      value={combinedSearchQuery}
+                      onChange={(e) => setCombinedSearchQuery(e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '8px 12px 8px 36px', 
+                        borderRadius: '8px', 
+                        border: '1px solid var(--border-color)', 
+                        background: 'rgba(15, 23, 42, 0.5)', 
+                        color: 'white', 
+                        fontSize: '0.9rem' 
+                      }}
+                    />
+                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>🔍</span>
+                  </div>
+                </div>
+
+                <div className="table-responsive">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>เครื่องมือ (Instrument)</th>
+                        <th>ชื่อรอบบันทึก (Session Name)</th>
+                        <th>วันที่สร้าง (Created At)</th>
+                        <th>จำนวนจุดข้อมูล (Data Points)</th>
+                        <th>รหัสงาน (Session ID)</th>
+                        <th style={{ textAlign: 'center' }}>การจัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const filteredJobs = jobs.filter(job => {
+                          const machineName = machines.find(m => m.id === job.machineId)?.name || '';
+                          const query = combinedSearchQuery.toLowerCase();
+                          return job.name.toLowerCase().includes(query) || machineName.toLowerCase().includes(query) || job.id.toLowerCase().includes(query);
+                        });
+
+                        if (filteredJobs.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                                ไม่พบข้อมูลรอบการรันที่ค้นหา
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filteredJobs.map(job => {
+                          const machine = machines.find(m => m.id === job.machineId);
+                          return (
+                            <tr key={job.id}>
+                              <td style={{ fontWeight: 600 }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  🖥️ {machine?.name || 'Unknown'}
+                                </span>
+                              </td>
+                              <td style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{job.name}</td>
+                              <td>{job.createdAt}</td>
+                              <td>{job.data?.length || 0} จุด</td>
+                              <td><code>{job.id}</code></td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                  <button 
+                                    className="replay-close-btn"
+                                    style={{ background: 'rgba(0, 240, 255, 0.1)', borderColor: 'rgba(0, 240, 255, 0.2)', color: '#00f0ff', padding: '6px 12px' }}
+                                    onClick={() => {
+                                      setCurrentMachineId(job.machineId);
+                                      setCurrentJobId(job.id);
+                                      setCurrentAppView('monitoring');
+                                      setActiveTab('dashboard');
+                                    }}
+                                  >
+                                    เปิดบอร์ดข้อมูล
+                                  </button>
+                                  <button 
+                                    className="delete-row-btn" 
+                                    onClick={(e) => deleteJob(job.id, e)}
+                                    title="Delete Session"
+                                    style={{ margin: 0 }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              /* TAB 2: MULTI-SESSION COMPARE CHART */
+              <div style={{ display: 'flex', gap: '1.5rem', flexDirection: 'column' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+                  
+                  {/* Select Sessions Panel */}
+                  <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>1. เลือกรอบการรันเพื่อเปรียบเทียบ</h3>
+                      
+                      {/* Select Parameter Dropdown */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ตัวแปรที่วิเคราะห์:</span>
+                        <select 
+                          value={compareParam}
+                          onChange={(e) => setCompareParam(e.target.value)}
+                          style={{ 
+                            padding: '6px 12px', 
+                            borderRadius: '8px', 
+                            border: '1px solid var(--border-color)', 
+                            background: '#0f172a', 
+                            color: 'white', 
+                            fontSize: '0.85rem', 
+                            cursor: 'pointer' 
+                          }}
+                        >
+                          <option value="temp_read">อุณหภูมิ PV (°C)</option>
+                          <option value="ph_read">ค่า pH PV</option>
+                          <option value="do_read">ค่า DO PV (%)</option>
+                          <option value="agit_read">ความเร็วการกวน AGIT (RPM)</option>
+                          <option value="air_read">อัตราไหลลม AIR (L/M)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Session Selection Checkbox list */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem', background: 'rgba(15, 23, 42, 0.2)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      {jobs.map(job => {
+                        const machine = machines.find(m => m.id === job.machineId);
+                        const isChecked = selectedCompareJobIds.includes(job.id);
+                        return (
+                          <label 
+                            key={job.id} 
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '0.75rem', 
+                              padding: '8px 12px', 
+                              borderRadius: '6px', 
+                              background: isChecked ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255, 255, 255, 0.02)', 
+                              border: isChecked ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid var(--border-color)', 
+                              cursor: 'pointer',
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            <input 
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                if (isChecked) {
+                                  setSelectedCompareJobIds(prev => prev.filter(id => id !== job.id));
+                                } else {
+                                  setSelectedCompareJobIds(prev => [...prev, job.id]);
+                                }
+                              }}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.name}</div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{machine?.name} ({job.data?.length || 0} จุด)</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Chart Display Panel */}
+                  <div className="glass-panel" style={{ padding: '1.5rem', height: '500px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.25rem' }}>2. กราฟเปรียบเทียบแนวโน้ม (เทียบชั่วโมงเลี้ยงเชื้อ Culture Hour)</h3>
+                    {selectedCompareJobIds.length === 0 ? (
+                      <div style={{ display: 'flex', height: '80%', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '2rem' }}>📊</span>
+                        <span>กรุณาเลือกอย่างน้อยหนึ่งรอบบันทึกเพื่อแสดงผลเปรียบเทียบกราฟ</span>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="85%">
+                        <LineChart data={(() => {
+                          const roundedPoints = {};
+                          selectedCompareJobIds.forEach(jobId => {
+                            const job = jobs.find(j => j.id === jobId);
+                            if (!job) return;
+                            const machine = machines.find(m => m.id === job.machineId);
+                            const mPrefix = machine ? `${machine.name} - ` : '';
+                            const lineKey = `${mPrefix}${job.name}`;
+
+                            // Find earliest timestamp for cultureHour starting point
+                            let minTimeMs = Infinity;
+                            if (job.data && job.data.length > 0) {
+                              job.data.forEach(row => {
+                                if (row.timestamp) {
+                                  const t = new Date(row.timestamp).getTime();
+                                  if (!isNaN(t) && t < minTimeMs) minTimeMs = t;
+                                }
+                              });
+                            }
+
+                            if (job.data) {
+                              job.data.forEach(row => {
+                                const val = row[compareParam];
+                                if (val === undefined || isNaN(parseFloat(val))) return;
+
+                                const t = row.timestamp ? new Date(row.timestamp).getTime() : NaN;
+                                const elapsed = isNaN(t) || minTimeMs === Infinity ? 0 : (t - minTimeMs) / 3600000;
+                                const roundedElapsed = Math.round(elapsed * 10) / 10;
+
+                                if (!roundedPoints[roundedElapsed]) {
+                                  roundedPoints[roundedElapsed] = { cultureHour: roundedElapsed };
+                                }
+                                roundedPoints[roundedElapsed][lineKey] = parseFloat(val);
+                              });
+                            }
+                          });
+
+                          return Object.values(roundedPoints).sort((a, b) => a.cultureHour - b.cultureHour);
+                        })()}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                          <XAxis dataKey="cultureHour" stroke="var(--text-secondary)" tick={{fontSize: 12}} label={{ value: 'ชั่วโมงการเลี้ยงเชื้อ (Culture Hour)', position: 'insideBottomRight', offset: -10, fill: 'var(--text-secondary)', fontSize: 12 }} />
+                          <YAxis stroke="var(--text-secondary)" tick={{fontSize: 12}} />
+                          <Tooltip 
+                            contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                            labelFormatter={(val) => `ชั่วโมงเลี้ยงเชื้อ: ${val} ชม.`}
+                          />
+                          <Legend wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
+                          {selectedCompareJobIds.map((jobId, idx) => {
+                            const job = jobs.find(j => j.id === jobId);
+                            if (!job) return null;
+                            const machine = machines.find(m => m.id === job.machineId);
+                            const mPrefix = machine ? `${machine.name} - ` : '';
+                            const lineKey = `${mPrefix}${job.name}`;
+                            const COMPARE_COLORS = [
+                              'var(--accent-red)',
+                              'var(--accent-blue)',
+                              'var(--accent-green)',
+                              'var(--accent-yellow)',
+                              'var(--accent-purple)',
+                              '#00f0ff',
+                              '#ec4899',
+                              '#f43f5e',
+                              '#14b8a6',
+                              '#84cc16'
+                            ];
+                            return (
+                              <Line 
+                                key={jobId}
+                                type="monotone"
+                                dataKey={lineKey}
+                                name={lineKey}
+                                stroke={COMPARE_COLORS[idx % COMPARE_COLORS.length]}
+                                strokeWidth={3}
+                                dot={true}
+                                connectNulls={true}
+                              />
+                            );
+                          })}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            )}
           </div>
         ) : currentAppView === 'settings' ? (
           /* SYSTEM SETTINGS VIEW */
