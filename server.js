@@ -474,7 +474,7 @@ app.post('/api/jobs/:id/data', async (req, res) => {
   console.log(`POST /api/jobs/${id}/data payload:`, req.body);
 
   const newDataPoint = {
-    timestamp: normalizeDateTime(req.body.date, req.body.time) || normalizeDateTime(undefined, req.body.time) || new Date().toISOString(),
+    timestamp: req.body.timestamp || normalizeDateTime(req.body.date, req.body.time) || normalizeDateTime(undefined, req.body.time) || new Date().toISOString(),
     date: null,
     time: normalizeTimeHHMM(req.body.time) || normalizeTimeHHMM(new Date()),
     temp_set: parseFloat(temp_set) || 0,
@@ -566,7 +566,7 @@ app.put('/api/jobs/:id/data/:index', async (req, res) => {
   }
 
   const cleanPoint = {
-    timestamp: normalizeDateTime(updatedPoint.date, updatedPoint.time) || updatedPoint.timestamp || new Date().toISOString(),
+    timestamp: updatedPoint.timestamp || normalizeDateTime(updatedPoint.date, updatedPoint.time) || new Date().toISOString(),
     date: updatedPoint.date || new Date().toISOString().slice(0, 10),
     time: normalizeTimeHHMM(updatedPoint.time) || normalizeTimeHHMM(new Date()),
     temp_set: parseFloat(updatedPoint.temp_set) || 0,

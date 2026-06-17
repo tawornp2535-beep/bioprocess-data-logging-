@@ -871,10 +871,33 @@ function App() {
   const saveEditRow = async () => {
     if (editingRowIndex === null || !editingRowData) return;
     try {
+      const { date, time } = editingRowData;
+      let timestamp = editingRowData.timestamp || new Date().toISOString();
+      if (date && time) {
+        const dateParts = date.split('-');
+        const timeParts = time.split(':');
+        if (dateParts.length === 3 && timeParts.length >= 2) {
+          const year = parseInt(dateParts[0], 10);
+          const month = parseInt(dateParts[1], 10) - 1;
+          const day = parseInt(dateParts[2], 10);
+          const hours = parseInt(timeParts[0], 10);
+          const minutes = parseInt(timeParts[1], 10);
+          const localDate = new Date(year, month, day, hours, minutes, 0);
+          if (!isNaN(localDate.getTime())) {
+            timestamp = localDate.toISOString();
+          }
+        }
+      }
+
+      const payload = {
+        ...editingRowData,
+        timestamp
+      };
+
       const res = await fetch(`/api/jobs/${currentJobId}/data/${editingRowIndex}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingRowData)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         const data = await res.json();
@@ -949,6 +972,25 @@ function App() {
     date = ''
   ) => {
     if (!currentJobId) return;
+    
+    // Construct local timestamp on client side to avoid server-side timezone shifts
+    let timestamp = new Date().toISOString();
+    if (date && time) {
+      const dateParts = date.split('-');
+      const timeParts = time.split(':');
+      if (dateParts.length === 3 && timeParts.length >= 2) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const day = parseInt(dateParts[2], 10);
+        const hours = parseInt(timeParts[0], 10);
+        const minutes = parseInt(timeParts[1], 10);
+        const localDate = new Date(year, month, day, hours, minutes, 0);
+        if (!isNaN(localDate.getTime())) {
+          timestamp = localDate.toISOString();
+        }
+      }
+    }
+
     try {
       const res = await fetch(`/api/jobs/${currentJobId}/data`, {
         method: 'POST',
@@ -961,7 +1003,8 @@ function App() {
           air_set, air_read,
           remark,
           time,
-          date
+          date,
+          timestamp
         })
       });
       if (res.ok) {
