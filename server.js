@@ -160,6 +160,50 @@ const writeLocalDB = (data) => {
 };
 
 // ──────────────────────────────────────────────────────────
+// Timezone Migration Helper (Fixes old UTC-parsed timestamps)
+// ──────────────────────────────────────────────────────────
+const migrateDataPoints = (jobs) => {
+  let migrated = false;
+  jobs.forEach(job => {
+    if (job.data && Array.isArray(job.data)) {
+      job.data.forEach(row => {
+        if (row.date && row.time && row.timestamp) {
+          // Extract HH:MM from ISO timestamp (e.g., "2026-06-16T13:40:00.000Z" -> "13:40")
+          const tsTime = row.timestamp.slice(11, 16); 
+          const pad2 = (n) => String(n).padStart(2, '0');
+          
+          let cleanTime = '';
+          const m = row.time.match(/(\d{1,2}):(\d{2})/);
+          if (m) {
+            cleanTime = `${pad2(parseInt(m[1], 10))}:${pad2(parseInt(m[2], 10))}`;
+          }
+
+          // If the stored ISO UTC time exactly matches the local HH:MM, it was parsed incorrectly as UTC
+          if (cleanTime && tsTime === cleanTime) {
+            const dateParts = row.date.split('-');
+            const timeParts = cleanTime.split(':');
+            if (dateParts.length === 3 && timeParts.length >= 2) {
+              const year = parseInt(dateParts[0], 10);
+              const month = parseInt(dateParts[1], 10) - 1;
+              const day = parseInt(dateParts[2], 10);
+              const hours = parseInt(timeParts[0], 10);
+              const minutes = parseInt(timeParts[1], 10);
+              // Construct correctly in local time
+              const localDate = new Date(year, month, day, hours, minutes, 0);
+              if (!isNaN(localDate.getTime())) {
+                row.timestamp = localDate.toISOString();
+                migrated = true;
+              }
+            }
+          }
+        }
+      });
+    }
+  });
+  return migrated;
+};
+
+// ──────────────────────────────────────────────────────────
 // Unified Data Fetch
 // ──────────────────────────────────────────────────────────
 const getDB = async () => {
@@ -185,13 +229,32 @@ const getDB = async () => {
         machines = [defaultMachine];
         jobs = [defaultJob];
       }
+
+      // Run timezone migration on loaded Firestore jobs
+      const migrated = migrateDataPoints(jobs);
+      if (migrated) {
+        console.log('⚡ Detected old data points with timezone offset bugs. Migrating Firestore documents...');
+        const batch = db.batch();
+        for (const job of jobs) {
+          batch.set(db.collection(JOBS_COL).doc(job.id), job);
+        }
+        await batch.commit();
+        console.log('✅ Firestore timezone migration completed successfully.');
+      }
+
       return { machines, jobs, customers };
     } catch (e) {
       console.error('Error reading Firestore, falling back to local file:', e);
       return readLocalDB();
     }
   } else {
-    return readLocalDB();
+    const localDB = readLocalDB();
+    const migrated = migrateDataPoints(localDB.jobs);
+    if (migrated) {
+      console.log('⚡ Detected old data points with timezone offset bugs. Migrating local db.json...');
+      writeLocalDB(localDB);
+    }
+    return localDB;
   }
 };
 
