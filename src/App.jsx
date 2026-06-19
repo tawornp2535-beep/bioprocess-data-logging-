@@ -859,11 +859,30 @@ function App() {
   const [customers, setCustomers] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackRating, setFeedbackRating] = useState(5);
-  const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackJobId, setFeedbackJobId] = useState('');
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
-  const [hoverRating, setHoverRating] = useState(0);
+  // New survey state
+  const SURVEY_QUESTIONS = [
+    { id: 'q1', section: 'กระบวนการให้บริการ', text: 'ขั้นตอนการให้บริการมีความเหมาะสม คล่องตัว เข้าใจง่าย' },
+    { id: 'q2', section: 'กระบวนการให้บริการ', text: 'มีช่องทางการติดต่อที่สะดวก เหมาะสม เช่น โทรศัพท์ เว็บไซต์ เครือข่ายสังคมออนไลน์' },
+    { id: 'q3', section: 'กระบวนการให้บริการ', text: 'ระยะเวลาในการให้บริการเหมาะสม' },
+    { id: 'q4', section: 'เจ้าหน้าที่ผู้ให้บริการ', text: 'เจ้าหน้าที่ผู้ให้บริการมีบุคลิกภาพที่ดี และใส่ใจในการให้บริการ' },
+    { id: 'q5', section: 'เจ้าหน้าที่ผู้ให้บริการ', text: 'เจ้าหน้าที่ผู้ให้บริการให้คำแนะนำและตอบข้อซักถามอย่างชัดเจน' },
+    { id: 'q6', section: 'เจ้าหน้าที่ผู้ให้บริการ', text: 'เจ้าหน้าที่ผู้ให้บริการมีความรู้ความสามารถในการให้บริการ' },
+    { id: 'q7', section: 'การประชาสัมพันธ์', text: 'สื่อประชาสัมพันธ์ เช่น โบรชัวร์ มีการแจ้งรายละเอียดข้อมูลของเครื่องมืออย่างชัดเจนและครอบคลุม' },
+    { id: 'q8', section: 'การประชาสัมพันธ์', text: 'มีการประชาสัมพันธ์หลากหลายช่องทาง' },
+    { id: 'q9', section: 'สถานที่และสิ่งอำนวยความสะดวก', text: 'สถานที่ให้บริการมีความเหมาะสมและเข้าถึงได้สะดวก' },
+    { id: 'q10', section: 'สถานที่และสิ่งอำนวยความสะดวก', text: 'สถานที่รอรับบริการมีสิ่งอำนวยความสะดวกเพียงพอ เช่น ที่นั่ง' },
+    { id: 'q11', section: 'คุณภาพการให้บริการ', text: 'ผลิตภัณฑ์หรือบริการของเราตอบสนองต่อความคาดหวังของคุณได้ดีเพียงใด' },
+  ];
+  const CHANNEL_OPTIONS = ['Website', 'Facebook', 'แผ่นพับโบรชัวร์ (Brochure)', 'การแนะนำจากคนรู้จัก', 'อื่น ๆ'];
+  const TOOL_OPTIONS = ['Fermentor 10 L', 'Fermentor 70 L', 'Fermentor 750 L', 'Continuous Centrifuge', 'Freeze Dryer', 'Ultrafiltration'];
+  const initScores = () => Object.fromEntries(SURVEY_QUESTIONS.map(q => [q.id, 5]));
+  const [feedbackScores, setFeedbackScores] = useState(initScores);
+  const [feedbackChannels, setFeedbackChannels] = useState([]);
+  const [feedbackTools, setFeedbackTools] = useState([]);
+  const [feedbackSuggestion, setFeedbackSuggestion] = useState('');
+
 
   const [activeTab, setActiveTab] = useState('diagram'); // 'diagram' | 'dashboard' | 'combined' | 'table'
   // Theme: 'dark' | 'light'
@@ -1967,8 +1986,10 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jobId: feedbackJobId,
-          rating: feedbackRating,
-          comment: feedbackComment.trim()
+          scores: feedbackScores,
+          channels: feedbackChannels,
+          tools: feedbackTools,
+          suggestion: feedbackSuggestion.trim()
         })
       });
       if (res.ok) {
@@ -1977,8 +1998,10 @@ function App() {
         setFeedbackSuccess(true);
         setTimeout(() => {
           setShowFeedbackModal(false);
-          setFeedbackComment('');
-          setFeedbackRating(5);
+          setFeedbackScores(initScores());
+          setFeedbackChannels([]);
+          setFeedbackTools([]);
+          setFeedbackSuggestion('');
           setFeedbackSuccess(false);
           // If logout was pending (customer clicked logout), do logout now
           if (window._pendingLogout) {
@@ -2090,8 +2113,10 @@ function App() {
     if (userRole === 'customer') {
       setTimeout(() => {
         setFeedbackJobId(job.id);
-        setFeedbackRating(5);
-        setFeedbackComment('');
+        setFeedbackScores(initScores());
+        setFeedbackChannels([]);
+        setFeedbackTools([]);
+        setFeedbackSuggestion('');
         setFeedbackSuccess(false);
         setShowFeedbackModal(true);
       }, 800);
@@ -2154,8 +2179,10 @@ function App() {
     if (userRole === 'customer') {
       setTimeout(() => {
         setFeedbackJobId(job.id);
-        setFeedbackRating(5);
-        setFeedbackComment('');
+        setFeedbackScores(initScores());
+        setFeedbackChannels([]);
+        setFeedbackTools([]);
+        setFeedbackSuggestion('');
         setFeedbackSuccess(false);
         setShowFeedbackModal(true);
       }, 800);
@@ -2613,8 +2640,10 @@ function App() {
               style={{ marginBottom: '0.5rem', background: 'linear-gradient(135deg, rgba(234,179,8,0.18), rgba(234,179,8,0.06))', borderColor: 'rgba(234,179,8,0.4)', color: '#fde68a' }}
               onClick={() => {
                 setFeedbackJobId(activeCustomerJobId || null);
-                setFeedbackRating(5);
-                setFeedbackComment('');
+                setFeedbackScores(initScores());
+                setFeedbackChannels([]);
+                setFeedbackTools([]);
+                setFeedbackSuggestion('');
                 setFeedbackSuccess(false);
                 setShowFeedbackModal(true);
               }}
@@ -2629,8 +2658,10 @@ function App() {
               if (userRole === 'customer') {
                 // Show feedback before logout for customer
                 setFeedbackJobId(activeCustomerJobId || null);
-                setFeedbackRating(5);
-                setFeedbackComment('');
+                setFeedbackScores(initScores());
+                setFeedbackChannels([]);
+                setFeedbackTools([]);
+                setFeedbackSuggestion('');
                 setFeedbackSuccess(false);
                 setShowFeedbackModal(true);
                 // Set a flag to logout after modal closes
@@ -3435,56 +3466,131 @@ function App() {
           /* CUSTOMER FEEDBACKS VIEW FOR ADMIN */
           <div className="feedbacks-view">
             <header className="dashboard-header">
-              <h2>Customer Feedbacks (ความพึงพอใจลูกค้า)</h2>
+              <h2>แบบประเมินความพึงพอใจลูกค้า (Customer Satisfaction Survey)</h2>
             </header>
 
-            {/* Statistics Cards */}
             {(() => {
               const total = feedbacks.length;
-              const avg = total > 0 ? (feedbacks.reduce((sum, f) => sum + f.rating, 0) / total).toFixed(1) : '0.0';
-              const starCounts = [0, 0, 0, 0, 0, 0];
-              feedbacks.forEach(f => {
-                if (f.rating >= 1 && f.rating <= 5) starCounts[f.rating]++;
+              const avg = total > 0 ? (feedbacks.reduce((sum, f) => sum + (f.avgScore || f.rating || 0), 0) / total).toFixed(2) : '0.00';
+
+              // Section averages
+              const sectionDefs = [
+                { name: 'ด้านกระบวนการให้บริการ', keys: ['q1','q2','q3'] },
+                { name: 'ด้านเจ้าหน้าที่ผู้ให้บริการ', keys: ['q4','q5','q6'] },
+                { name: 'ด้านการประชาสัมพันธ์', keys: ['q7','q8'] },
+                { name: 'ด้านสถานที่และสิ่งอำนวยความสะดวก', keys: ['q9','q10'] },
+                { name: 'ด้านคุณภาพการให้บริการ', keys: ['q11'] },
+              ];
+
+              const sectionAvgs = sectionDefs.map(sd => {
+                const allVals = [];
+                feedbacks.forEach(f => {
+                  if (f.scores) {
+                    sd.keys.forEach(k => { if (f.scores[k]) allVals.push(Number(f.scores[k])); });
+                  }
+                });
+                const avg = allVals.length > 0 ? (allVals.reduce((a,b)=>a+b,0)/allVals.length) : null;
+                return { name: sd.name, avg };
               });
 
+              // Channel counts
+              const channelCounts = {};
+              feedbacks.forEach(f => { (f.channels||[]).forEach(ch => { channelCounts[ch] = (channelCounts[ch]||0)+1; }); });
+              const maxChCount = Math.max(1, ...Object.values(channelCounts));
+
+              // Tool counts
+              const toolCounts = {};
+              feedbacks.forEach(f => { (f.tools||[]).forEach(t => { toolCounts[t] = (toolCounts[t]||0)+1; }); });
+              const maxToolCount = Math.max(1, ...Object.values(toolCounts));
+
+              const scoreColor = (v) => {
+                if (!v) return 'var(--text-secondary)';
+                if (v >= 4.5) return '#22c55e';
+                if (v >= 3.5) return '#84cc16';
+                if (v >= 2.5) return '#eab308';
+                if (v >= 1.5) return '#f97316';
+                return '#ef4444';
+              };
+
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                  <div className="stat-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>คะแนนเฉลี่ย CSAT</span>
-                    <span style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--accent-yellow)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {avg} <span style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>/ 5.0</span>
-                    </span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {"★".repeat(Math.round(avg)) + "☆".repeat(5 - Math.round(avg))}
-                    </span>
-                  </div>
+                <>
+                  {/* Summary Stats */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '1.75rem' }}>
+                    <div className="stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>คะแนนเฉลี่ยรวม (CSAT)</span>
+                      <span style={{ fontSize: '2.2rem', fontWeight: 700, color: 'var(--accent-yellow)', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                        {avg} <span style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', fontWeight: 500 }}>/ 5.00</span>
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        {"★".repeat(Math.round(avg)) + "☆".repeat(5 - Math.round(avg))}
+                      </span>
+                    </div>
 
-                  <div className="stat-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>จำนวนผู้ประเมิน</span>
-                    <span style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
-                      {total} <span style={{ fontSize: '1.2rem', fontWeight: 500, color: 'var(--text-secondary)' }}>ครั้ง</span>
-                    </span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>เก็บข้อมูลแบบ Real-time บนระบบ</span>
-                  </div>
+                    <div className="stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>จำนวนผู้ประเมิน</span>
+                      <span style={{ fontSize: '2.2rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                        {total} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>ราย</span>
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Real-time จาก Firestore</span>
+                    </div>
 
-                  <div className="stat-card" style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>สัดส่วนการให้คะแนน</span>
-                    {[5, 4, 3, 2, 1].map(star => {
-                      const count = starCounts[star];
-                      const pct = total > 0 ? (count / total) * 100 : 0;
-                      return (
-                        <div key={star} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
-                          <span style={{ width: '12px', color: 'var(--accent-yellow)' }}>★</span>
-                          <span style={{ width: '8px', color: 'var(--text-secondary)' }}>{star}</span>
-                          <div style={{ flex: 1, height: '6px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-yellow)', borderRadius: '3px' }} />
+                    {/* Section Averages */}
+                    <div className="stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '8px', gridColumn: 'span 2' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>คะแนนเฉลี่ยรายด้าน</span>
+                      {sectionAvgs.map((s, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem' }}>
+                          <span style={{ flex: 1, color: '#d1d5db', fontSize: '0.78rem' }}>{s.name}</span>
+                          <div style={{ width: '120px', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${s.avg ? (s.avg/5)*100 : 0}%`, height: '100%', background: scoreColor(s.avg), borderRadius: '3px', transition: 'width 0.4s' }} />
                           </div>
-                          <span style={{ width: '24px', textAlign: 'right', color: 'var(--text-secondary)' }}>{count}</span>
+                          <span style={{ width: '36px', textAlign: 'right', fontWeight: 700, color: scoreColor(s.avg) }}>
+                            {s.avg ? s.avg.toFixed(2) : '—'}
+                          </span>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
+
+                  {/* Channel & Tool Summary */}
+                  {(Object.keys(channelCounts).length > 0 || Object.keys(toolCounts).length > 0) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
+                      {/* Channels */}
+                      {Object.keys(channelCounts).length > 0 && (
+                        <div className="stat-card" style={{ padding: '1.25rem' }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-blue)', marginBottom: '10px' }}>📡 ช่องทางที่รู้จัก FTC</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {Object.entries(channelCounts).sort((a,b)=>b[1]-a[1]).map(([ch, cnt]) => (
+                              <div key={ch} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                                <span style={{ flex: 1, color: '#d1d5db' }}>{ch}</span>
+                                <div style={{ width: '80px', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${(cnt/maxChCount)*100}%`, height: '100%', background: 'var(--accent-blue)', borderRadius: '3px' }} />
+                                </div>
+                                <span style={{ width: '24px', textAlign: 'right', color: 'var(--accent-blue)', fontWeight: 700 }}>{cnt}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Tools */}
+                      {Object.keys(toolCounts).length > 0 && (
+                        <div className="stat-card" style={{ padding: '1.25rem' }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-green)', marginBottom: '10px' }}>🔬 เครื่องมือที่ใช้บริการ</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {Object.entries(toolCounts).sort((a,b)=>b[1]-a[1]).map(([t, cnt]) => (
+                              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                                <span style={{ flex: 1, color: '#d1d5db' }}>{t}</span>
+                                <div style={{ width: '80px', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ width: `${(cnt/maxToolCount)*100}%`, height: '100%', background: 'var(--accent-green)', borderRadius: '3px' }} />
+                                </div>
+                                <span style={{ width: '24px', textAlign: 'right', color: 'var(--accent-green)', fontWeight: 700 }}>{cnt}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               );
             })()}
 
@@ -3493,34 +3599,38 @@ function App() {
                 ยังไม่มีลูกค้าประเมินความพึงพอใจเข้ามาในระบบ
               </div>
             ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {feedbacks.map((fb) => (
-                    <div key={fb.id} style={{ 
-                      background: 'rgba(255, 255, 255, 0.02)', 
-                      border: '1px solid rgba(255, 255, 255, 0.05)', 
-                      borderRadius: '12px', 
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {feedbacks.map((fb) => {
+                  const displayScore = fb.avgScore || fb.rating || 0;
+                  const scoreC = displayScore >= 4.5 ? '#22c55e' : displayScore >= 3.5 ? '#84cc16' : displayScore >= 2.5 ? '#eab308' : '#f97316';
+                  const scoreLabel = displayScore >= 4.5 ? 'มากที่สุด' : displayScore >= 3.5 ? 'มาก' : displayScore >= 2.5 ? 'ปานกลาง' : displayScore >= 1.5 ? 'น้อย' : 'น้อยที่สุด';
+                  return (
+                    <div key={fb.id} style={{
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '12px',
                       padding: '1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                      position: 'relative'
+                      display: 'flex', flexDirection: 'column', gap: '10px'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      {/* Card Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                         <div>
                           <span style={{ fontWeight: 600, color: 'var(--accent-blue)', marginRight: '10px' }}>
-                            📁 รอบรัน: {fb.jobName || 'Unknown'}
+                            📁 {fb.jobName || 'Unknown'}
                           </span>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {formatCreatedAt(fb.createdAt)}
-                          </span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{formatCreatedAt(fb.createdAt)}</span>
                         </div>
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ color: 'var(--accent-yellow)', fontWeight: 600 }}>
-                            {"★".repeat(fb.rating) + "☆".repeat(5 - fb.rating)} ({fb.rating} / 5)
-                          </span>
-                          <button 
-                            className="delete-row-btn" 
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: scoreC + '22', border: `1px solid ${scoreC}55`,
+                            borderRadius: '20px', padding: '3px 10px'
+                          }}>
+                            <span style={{ color: scoreC, fontWeight: 700, fontSize: '0.9rem' }}>★ {Number(displayScore).toFixed(2)}</span>
+                            <span style={{ fontSize: '0.75rem', color: scoreC }}>{scoreLabel}</span>
+                          </div>
+                          <button
+                            className="delete-row-btn"
                             style={{ margin: 0, padding: '4px' }}
                             onClick={() => deleteFeedback(fb.id)}
                             title="Delete feedback"
@@ -3529,15 +3639,56 @@ function App() {
                           </button>
                         </div>
                       </div>
-                      
-                      <div style={{ fontSize: '0.9rem', color: '#cbdce0', fontStyle: fb.comment ? 'normal' : 'italic', marginTop: '4px' }}>
-                        {fb.comment ? `"${fb.comment}"` : "— ไม่มีความเห็นเพิ่มเติม —"}
-                      </div>
+
+                      {/* Section Scores (if new format) */}
+                      {fb.scores && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '4px' }}>
+                          {Object.entries(fb.scores).map(([k, v]) => {
+                            const qIdx = parseInt(k.replace('q','')) - 1;
+                            const qObj = [
+                              'ขั้นตอนการให้บริการ','ช่องทางการติดต่อ','ระยะเวลาให้บริการ',
+                              'บุคลิกภาพเจ้าหน้าที่','คำแนะนำของเจ้าหน้าที่','ความรู้เจ้าหน้าที่',
+                              'สื่อประชาสัมพันธ์','ช่องทาง PR','สถานที่ให้บริการ',
+                              'สิ่งอำนวยความสะดวก','คุณภาพบริการ'
+                            ];
+                            const label = qObj[qIdx] || k;
+                            const score = Number(v);
+                            const c = score >= 5 ? '#22c55e' : score >= 4 ? '#84cc16' : score >= 3 ? '#eab308' : score >= 2 ? '#f97316' : '#ef4444';
+                            return (
+                              <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
+                                <span style={{ color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={label}>{label}</span>
+                                <span style={{ fontWeight: 700, color: c, minWidth: '16px', textAlign: 'right' }}>{score}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Channels & Tools used */}
+                      {((fb.channels && fb.channels.length > 0) || (fb.tools && fb.tools.length > 0)) && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {(fb.channels||[]).map(ch => (
+                            <span key={ch} style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)', color: '#93c5fd' }}>📡 {ch}</span>
+                          ))}
+                          {(fb.tools||[]).map(t => (
+                            <span key={t} style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#86efac' }}>🔬 {t}</span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Suggestion / Comment */}
+                      {(fb.suggestion || fb.comment) && (
+                        <div style={{ fontSize: '0.85rem', color: '#cbdce0', fontStyle: 'italic', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                          💬 "{fb.suggestion || fb.comment}"
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         ) : (
           /* MONITORING VIEW */
           <>
@@ -4758,9 +4909,9 @@ function App() {
         </div>
       )}
 
-      {/* Glassmorphic Feedback Modal */}
-      {showFeedbackModal && (
-        <div className="modal-backdrop" onClick={() => {
+      {/* Glassmorphic Feedback Modal — แบบประเมินความพึงพอใจ */}
+      {showFeedbackModal && (() => {
+        const closeFeedbackModal = () => {
           setShowFeedbackModal(false);
           if (window._pendingLogout) {
             window._pendingLogout = false;
@@ -4768,112 +4919,259 @@ function App() {
             setActiveCustomerJobId(null);
             setIsMobileMenuOpen(false);
           }
-        }}>
-          <div className="modal-container" style={{ maxWidth: '420px', padding: '1.5rem 2rem' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Star size={22} color="var(--accent-yellow)" />
-                ประเมินความพึงพอใจ
-              </h3>
-              <button className="modal-close-btn" onClick={() => {
-                setShowFeedbackModal(false);
-                if (window._pendingLogout) {
-                  window._pendingLogout = false;
-                  setUserRole(null);
-                  setActiveCustomerJobId(null);
-                  setIsMobileMenuOpen(false);
-                }
-              }}>✕</button>
-            </div>
-            
-            <div className="modal-body" style={{ marginTop: '1rem' }}>
-              {feedbackSuccess ? (
-                <div style={{ textAlign: 'center', padding: '1.5rem 0', color: 'var(--accent-green)' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '10px' }}>✓</div>
-                  <h4 style={{ fontWeight: 600 }}>ขอบคุณสำหรับความคิดเห็นของคุณ!</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '6px' }}>ระบบบันทึกคะแนนเรียบร้อยแล้ว</p>
+        };
+
+        // Group questions by section
+        const sections = [];
+        const sectionMap = {};
+        SURVEY_QUESTIONS.forEach(q => {
+          if (!sectionMap[q.section]) {
+            sectionMap[q.section] = [];
+            sections.push({ name: q.section, questions: sectionMap[q.section] });
+          }
+          sectionMap[q.section].push(q);
+        });
+
+        const scoreLabels = { 5: 'มากที่สุด', 4: 'มาก', 3: 'ปานกลาง', 2: 'น้อย', 1: 'น้อยที่สุด' };
+        const scoreColors = { 5: '#22c55e', 4: '#84cc16', 3: '#eab308', 2: '#f97316', 1: '#ef4444' };
+
+        const toggleChannel = (ch) => {
+          setFeedbackChannels(prev => prev.includes(ch) ? prev.filter(x => x !== ch) : [...prev, ch]);
+        };
+        const toggleTool = (t) => {
+          setFeedbackTools(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+        };
+
+        const inputStyle = {
+          padding: '10px 12px', borderRadius: '8px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          background: 'rgba(255,255,255,0.03)', color: 'white',
+          fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box'
+        };
+
+        return (
+          <div className="modal-backdrop" onClick={closeFeedbackModal}>
+            <div
+              className="modal-container"
+              style={{ maxWidth: '600px', padding: '0', overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: '1.25rem 1.75rem',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'linear-gradient(135deg, rgba(234,179,8,0.12), rgba(234,179,8,0.04))',
+                flexShrink: 0
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Star size={22} color="var(--accent-yellow)" />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#fde68a' }}>
+                      แบบประเมินความพึงพอใจ
+                    </h3>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      มาตราส่วน 5 ระดับ: 5 = มากที่สุด &nbsp;···&nbsp; 1 = น้อยที่สุด
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <form onSubmit={submitFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <p style={{ fontSize: '0.85rem', color: '#cbdce0', textAlign: 'center', lineHeight: 1.4 }}>
-                    คะแนนความพึงพอใจการดูบอร์ดข้อมูลรอบการรันนี้
-                  </p>
-                  
-                  {/* Star Selection */}
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', margin: '8px 0' }}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <span
-                        key={star}
-                        style={{
-                          cursor: 'pointer',
-                          fontSize: '2.5rem',
-                          color: star <= (hoverRating || feedbackRating) ? 'var(--accent-yellow)' : 'rgba(255, 255, 255, 0.15)',
-                          transition: 'color 0.2s',
-                          userSelect: 'none'
-                        }}
-                        onClick={() => setFeedbackRating(star)}
-                        onMouseEnter={() => setHoverRating(star)}
-                        onMouseLeave={() => setHoverRating(0)}
-                      >
-                        ★
-                      </span>
+                <button className="modal-close-btn" onClick={closeFeedbackModal}>✕</button>
+              </div>
+
+              {/* Modal Scrollable Body */}
+              <div style={{ overflowY: 'auto', flex: 1, padding: '1.5rem 1.75rem' }}>
+                {feedbackSuccess ? (
+                  <div style={{ textAlign: 'center', padding: '2.5rem 0', color: 'var(--accent-green)' }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '12px' }}>✓</div>
+                    <h4 style={{ fontWeight: 700, fontSize: '1.1rem', margin: '0 0 8px' }}>ขอบคุณสำหรับความคิดเห็นของคุณ!</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>ระบบบันทึกแบบประเมินเรียบร้อยแล้ว</p>
+                  </div>
+                ) : (
+                  <form onSubmit={submitFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+
+                    {/* Score Table Header */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 40px 40px 40px 40px 40px',
+                      gap: '4px',
+                      alignItems: 'center',
+                      padding: '8px 10px',
+                      background: 'rgba(234,179,8,0.06)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(234,179,8,0.15)',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      color: 'var(--text-secondary)',
+                      letterSpacing: '0.03em'
+                    }}>
+                      <span>หัวข้อการประเมิน</span>
+                      {[5,4,3,2,1].map(s => (
+                        <span key={s} style={{ textAlign: 'center', color: scoreColors[s] }}>{s}<br/><span style={{ fontSize: '0.6rem', fontWeight: 400 }}>{scoreLabels[s].substring(0,3)}</span></span>
+                      ))}
+                    </div>
+
+                    {/* Sections + Questions */}
+                    {sections.map((sec, si) => (
+                      <div key={si} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {/* Section Header */}
+                        <div style={{
+                          fontSize: '0.78rem', fontWeight: 700,
+                          color: 'var(--accent-blue)',
+                          padding: '4px 0 6px',
+                          borderBottom: '1px solid rgba(59,130,246,0.2)',
+                          display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          <span style={{
+                            display: 'inline-block', width: '20px', height: '20px',
+                            borderRadius: '50%', background: 'rgba(59,130,246,0.2)',
+                            textAlign: 'center', lineHeight: '20px', fontSize: '0.65rem'
+                          }}>{si + 1}</span>
+                          ด้าน{sec.name}
+                        </div>
+
+                        {/* Questions in this section */}
+                        {sec.questions.map((q, qi) => (
+                          <div key={q.id} style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 40px 40px 40px 40px 40px',
+                            gap: '4px',
+                            alignItems: 'center',
+                            padding: '8px 10px',
+                            borderRadius: '8px',
+                            background: qi % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                            transition: 'background 0.15s'
+                          }}>
+                            <span style={{ fontSize: '0.82rem', color: '#d1d5db', lineHeight: 1.4, paddingRight: '8px' }}>
+                              {SURVEY_QUESTIONS.indexOf(q) + 1}. {q.text}
+                            </span>
+                            {[5,4,3,2,1].map(score => (
+                              <label key={score} style={{ display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+                                <input
+                                  type="radio"
+                                  name={q.id}
+                                  value={score}
+                                  checked={feedbackScores[q.id] === score}
+                                  onChange={() => setFeedbackScores(prev => ({ ...prev, [q.id]: score }))}
+                                  style={{ display: 'none' }}
+                                />
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  width: '28px', height: '28px', borderRadius: '50%',
+                                  border: `2px solid ${feedbackScores[q.id] === score ? scoreColors[score] : 'rgba(255,255,255,0.15)'}`,
+                                  background: feedbackScores[q.id] === score ? scoreColors[score] + '33' : 'transparent',
+                                  fontSize: '0.75rem', fontWeight: 700,
+                                  color: feedbackScores[q.id] === score ? scoreColors[score] : 'rgba(255,255,255,0.35)',
+                                  transition: 'all 0.15s',
+                                  userSelect: 'none'
+                                }}>
+                                  {score}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
                     ))}
-                  </div>
-                  
-                  {/* Comment */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ข้อเสนอแนะเพิ่มเติม (ถ้ามี)</label>
-                    <textarea
-                      value={feedbackComment}
-                      onChange={(e) => setFeedbackComment(e.target.value)}
-                      placeholder="พิมพ์ความคิดเห็นหรือคำแนะนำของคุณที่นี่..."
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        color: 'white',
-                        fontSize: '0.85rem',
-                        height: '80px',
-                        resize: 'none',
-                        outline: 'none',
-                        fontFamily: 'inherit'
-                      }}
-                    />
-                  </div>
-                  
-                  <button type="submit" className="submit-btn" style={{ width: '100%', height: '42px', marginTop: '4px' }}>
-                    ส่งแบบประเมิน (Submit Rating)
-                  </button>
-                  {window._pendingLogout && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowFeedbackModal(false);
-                        window._pendingLogout = false;
-                        setUserRole(null);
-                        setActiveCustomerJobId(null);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      style={{
-                        width: '100%', height: '36px', marginTop: '6px',
-                        background: 'transparent',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        borderRadius: '8px',
-                        color: 'var(--text-secondary)',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ข้ามการประเมินและออกจากระบบ
-                    </button>
-                  )}
-                </form>
-              )}
+
+                    {/* Channel checkboxes */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                        📡 ช่องทางที่รู้จัก FTC <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(เลือกได้มากกว่า 1 ข้อ)</span>
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {CHANNEL_OPTIONS.map(ch => (
+                          <label key={ch} style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '6px 12px', borderRadius: '20px', cursor: 'pointer',
+                            border: `1px solid ${feedbackChannels.includes(ch) ? 'rgba(59,130,246,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                            background: feedbackChannels.includes(ch) ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.03)',
+                            fontSize: '0.8rem', color: feedbackChannels.includes(ch) ? '#93c5fd' : 'var(--text-secondary)',
+                            transition: 'all 0.15s', userSelect: 'none'
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={feedbackChannels.includes(ch)}
+                              onChange={() => toggleChannel(ch)}
+                              style={{ display: 'none' }}
+                            />
+                            {feedbackChannels.includes(ch) ? '✓ ' : ''}{ch}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tool checkboxes */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-green)' }}>
+                        🔬 เครื่องมือที่มาใช้บริการ <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(เลือกได้มากกว่า 1 ข้อ)</span>
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {TOOL_OPTIONS.map(t => (
+                          <label key={t} style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '6px 12px', borderRadius: '20px', cursor: 'pointer',
+                            border: `1px solid ${feedbackTools.includes(t) ? 'rgba(34,197,94,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                            background: feedbackTools.includes(t) ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)',
+                            fontSize: '0.8rem', color: feedbackTools.includes(t) ? '#86efac' : 'var(--text-secondary)',
+                            transition: 'all 0.15s', userSelect: 'none'
+                          }}>
+                            <input
+                              type="checkbox"
+                              checked={feedbackTools.includes(t)}
+                              onChange={() => toggleTool(t)}
+                              style={{ display: 'none' }}
+                            />
+                            {feedbackTools.includes(t) ? '✓ ' : ''}{t}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Suggestion textarea */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                        💬 ความคาดหวัง / ข้อเสนอแนะเพิ่มเติม
+                      </label>
+                      <textarea
+                        value={feedbackSuggestion}
+                        onChange={(e) => setFeedbackSuggestion(e.target.value)}
+                        placeholder="พิมพ์ความคิดเห็น ข้อเสนอแนะ หรือความคาดหวังของคุณที่นี่..."
+                        style={{ ...inputStyle, height: '80px', resize: 'none' }}
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>
+                      <button type="submit" className="submit-btn" style={{ width: '100%', height: '44px' }}>
+                        ✅ ส่งแบบประเมิน
+                      </button>
+                      {window._pendingLogout && (
+                        <button
+                          type="button"
+                          onClick={closeFeedbackModal}
+                          style={{
+                            width: '100%', height: '36px',
+                            background: 'transparent',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: '8px',
+                            color: 'var(--text-secondary)',
+                            fontSize: '0.8rem', cursor: 'pointer',
+                          }}
+                        >
+                          ข้ามการประเมินและออกจากระบบ
+                        </button>
+                      )}
+                    </div>
+
+                  </form>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+
 
       {/* Glassmorphic Add New Session Modal / Unified Run Setup Wizard */}
       {showAddSessionModal && (

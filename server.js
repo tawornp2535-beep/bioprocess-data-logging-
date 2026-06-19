@@ -378,21 +378,39 @@ const activeUsers = {};
 
 // ── Feedbacks ─────────────────────────────────────────────
 app.post('/api/feedbacks', async (req, res) => {
-  const { jobId, rating, comment } = req.body;
-  if (!jobId || !rating) {
-    return res.status(400).json({ error: 'Job ID and rating are required' });
+  const { jobId, scores, channels, tools, suggestion, rating, comment } = req.body;
+  if (!jobId) {
+    return res.status(400).json({ error: 'Job ID is required' });
   }
 
   const dbData = await getDB();
   const job = dbData.jobs.find(j => j.id === jobId);
   const jobName = job ? job.name : 'Unknown Session';
 
+  // Support both new format (scores) and legacy format (rating)
+  let avgScore = 5;
+  let normalizedScores = null;
+  if (scores && typeof scores === 'object') {
+    const vals = Object.values(scores).map(v => parseInt(v, 10)).filter(v => !isNaN(v) && v >= 1 && v <= 5);
+    avgScore = vals.length > 0 ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)) : 5;
+    normalizedScores = scores;
+  } else if (rating) {
+    avgScore = parseInt(rating, 10) || 5;
+  }
+
   const newFeedback = {
     id: 'fb-' + Date.now(),
     jobId,
     jobName,
-    rating: parseInt(rating, 10) || 5,
-    comment: comment ? String(comment).trim() : '',
+    // New structured fields
+    scores: normalizedScores,          // { q1..q11 } or null for legacy
+    channels: Array.isArray(channels) ? channels : [],
+    tools: Array.isArray(tools) ? tools : [],
+    suggestion: suggestion ? String(suggestion).trim() : '',
+    avgScore,
+    // Legacy fallback fields (kept for backward compat display)
+    rating: avgScore,
+    comment: suggestion ? String(suggestion).trim() : (comment ? String(comment).trim() : ''),
     createdAt: new Date().toISOString()
   };
 
@@ -653,6 +671,11 @@ app.put('/api/jobs/:id/status', async (req, res) => {
 
   if (isCloud) {
     try {
+      // Check if already finished — cannot change status of finished job
+      const doc = await db.collection(JOBS_COL).doc(id).get();
+      if (doc.exists && doc.data().status === 'finished') {
+        return res.status(400).json({ error: 'Cannot change status of a finished job' });
+      }
       await db.collection(JOBS_COL).doc(id).update({ status });
     } catch (e) {
       console.error('Firestore error updating session status:', e);
@@ -661,7 +684,35 @@ app.put('/api/jobs/:id/status', async (req, res) => {
     const localDB = readLocalDB();
     const job = localDB.jobs.find(j => j.id === id);
     if (job) {
+      if (job.status === 'finished') {
+        return res.status(400).json({ error: 'Cannot change status of a finished job' });
+      }
       job.status = status;
+      writeLocalDB(localDB);
+    }
+  }
+
+  res.json(await getDB());
+});
+
+// Finish a job permanently (cannot be restarted)
+app.put('/api/jobs/:id/finish', async (req, res) => {
+  const { id } = req.params;
+  const finishedAt = new Date().toISOString();
+
+  if (isCloud) {
+    try {
+      await db.collection(JOBS_COL).doc(id).update({ status: 'finished', finishedAt });
+    } catch (e) {
+      console.error('Firestore error finishing job:', e);
+      return res.status(500).json({ error: 'Failed to finish job' });
+    }
+  } else {
+    const localDB = readLocalDB();
+    const job = localDB.jobs.find(j => j.id === id);
+    if (job) {
+      job.status = 'finished';
+      job.finishedAt = finishedAt;
       writeLocalDB(localDB);
     }
   }
