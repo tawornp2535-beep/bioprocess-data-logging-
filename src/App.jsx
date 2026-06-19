@@ -92,7 +92,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 // BSTR Diagram Component
-const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying }) => {
+const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jobStatus = 'running', onToggleStatus, userRole }) => {
   if (!dataPoint) {
     return (
       <div className="glass-panel empty-state" style={{ height: '500px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -180,18 +180,21 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying }) 
     endLabel = `ชั่วโมงที่ ${chartData[chartData.length - 1].cultureHour !== undefined ? chartData[chartData.length - 1].cultureHour : 0}`;
   }
 
+  const isMachineStopped = jobStatus === 'stopped';
+
   // Impeller spinner speed calculation (CSS custom property)
-  const agitSpeedSec = agit_read > 0 ? Math.max(0.1, 60 / agit_read) : 0;
+  const agitSpeedSec = !isMachineStopped && agit_read > 0 ? Math.max(0.1, 60 / agit_read) : 0;
   const agitSpinStyle = agitSpeedSec > 0 ? {
     animation: `spin-blade ${agitSpeedSec}s linear infinite`,
     transformOrigin: '150px 240px'
   } : {};
 
   // Bubbling animation styling based on Air Flow
-  const airBubbleCount = air_read > 0 ? Math.min(20, Math.floor(air_read * 3) + 2) : 0;
+  const airBubbleCount = !isMachineStopped && air_read > 0 ? Math.min(20, Math.floor(air_read * 3) + 2) : 0;
 
   // Heating power color intensity mapping for the jacket glow
-  const jacketOpacity = Math.min(0.8, Math.max(0.1, heat_read / 100));
+  const heatReadForVisual = isMachineStopped ? 0 : heat_read;
+  const jacketOpacity = Math.min(0.8, Math.max(0.1, heatReadForVisual / 100));
 
   return (
     <div className="bstr-diagram-dashboard">
@@ -201,8 +204,18 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying }) 
           <h2>BATCH STIRRED TANK REACTOR (BSTR)</h2>
           <p className="diagram-subtitle">PROCESS MONITORING DIAGRAM</p>
         </div>
-        <div className="diagram-datetime-box">
-          📅 {timestampStr}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {userRole === 'admin' && !isReplaying && (
+            <button
+              onClick={onToggleStatus}
+              className={`status-control-btn ${isMachineStopped ? 'btn-start-machine' : 'btn-stop-machine'}`}
+            >
+              {isMachineStopped ? '▶️ กดเริ่มเครื่อง' : '🛑 กดหยุดเครื่อง'}
+            </button>
+          )}
+          <div className="diagram-datetime-box">
+            📅 {timestampStr}
+          </div>
         </div>
       </div>
 
@@ -291,7 +304,7 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying }) 
             </defs>
 
             {/* Heating Jacket Glow (Wrapper behind reactor) */}
-            {heat_read > 0 && (
+            {!isMachineStopped && heat_read > 0 && (
               <path
                 d="M 68 180 L 68 340 A 82 82 0 0 0 232 340 L 232 180 Z"
                 fill="url(#jacket-grad)"
@@ -419,7 +432,7 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying }) 
           <div className="motor-drive-display">
             <span className="display-label">MOTOR RPM</span>
             <div className="display-screen">
-              <span className="screen-val">{Math.round(agit_read)}</span>
+              <span className="screen-val">{isMachineStopped ? 0 : Math.round(agit_read)}</span>
               <span className="screen-unit">RPM</span>
             </div>
             <span className="display-sv">SV: {Math.round(agit_set)}</span>
@@ -702,7 +715,11 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying }) 
       {/* 4. FOOTER STATUS BAR */}
       <div className="diagram-status-footer-bar">
         <div className="status-indicator-tag">
-          STATUS: <span className={`status-badge-val ${isReplayingPlaying ? 'replaying-badge' : 'running-badge'}`}>{isReplaying ? (isReplayingPlaying ? 'PLAYBACK' : 'PAUSED') : 'RUNNING'}</span>
+          STATUS: <span className={`status-badge-val ${isReplaying ? (isReplayingPlaying ? 'replaying-badge' : 'paused-badge') : (isMachineStopped ? 'stopped-badge' : 'running-badge')}`}>
+            {isReplaying 
+              ? (isReplayingPlaying ? 'PLAYBACK' : 'PAUSED') 
+              : (isMachineStopped ? 'STOPPED' : 'RUNNING')}
+          </span>
         </div>
         <div className="action-buttons-indicator">
           <span className="indicator-btn-mock active-btn-mock">TREND</span>
@@ -870,7 +887,14 @@ function App() {
   // Combined Jobs view states
   const [combinedActiveTab, setCombinedActiveTab] = useState('list'); // 'list' | 'compare'
   const [selectedCompareJobIds, setSelectedCompareJobIds] = useState([]);
-  const [compareParam, setCompareParam] = useState('temp_read');
+  const [compareParams, setCompareParams] = useState(['temp_read']);
+  const COMPARE_PARAM_OPTIONS = [
+    { value: 'temp_read', label: 'อุณหภูมิ PV (°C)' },
+    { value: 'ph_read', label: 'ค่า pH PV' },
+    { value: 'do_read', label: 'ค่า DO PV (%)' },
+    { value: 'agit_read', label: 'ความเร็วการกวน AGIT (RPM)' },
+    { value: 'air_read', label: 'อัตราไหลลม AIR (L/M)' },
+  ];
   const [combinedSearchQuery, setCombinedSearchQuery] = useState('');
 
   const [formData, setFormData] = useState({
@@ -1534,6 +1558,32 @@ function App() {
         }
       } catch (err) {
         console.error(err);
+      }
+    }
+  };
+
+  const handleToggleJobStatus = async (jobId, currentStatus) => {
+    const nextStatus = currentStatus === 'stopped' ? 'running' : 'stopped';
+    const confirmMessage = nextStatus === 'stopped'
+      ? 'คุณต้องการหยุดการทำงานของเครื่องมือใช่หรือไม่?'
+      : 'คุณต้องการเริ่มการทำงานของเครื่องมือใช่หรือไม่?';
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: nextStatus })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          applyDBUpdate(data);
+        } else {
+          alert('ไม่สามารถเปลี่ยนสถานะเครื่องมือได้ กรุณาลองใหม่อีกครั้ง');
+        }
+      } catch (err) {
+        console.error('Error toggling job status:', err);
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
       }
     }
   };
@@ -2948,28 +2998,43 @@ function App() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
                       <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>1. เลือกรอบการรันเพื่อเปรียบเทียบ</h3>
                       
-                      {/* Select Parameter Dropdown */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>ตัวแปรที่วิเคราะห์:</span>
-                        <select 
-                          value={compareParam}
-                          onChange={(e) => setCompareParam(e.target.value)}
-                          style={{ 
-                            padding: '6px 12px', 
-                            borderRadius: '8px', 
-                            border: '1px solid var(--border-color)', 
-                            background: '#0f172a', 
-                            color: 'white', 
-                            fontSize: '0.85rem', 
-                            cursor: 'pointer' 
-                          }}
-                        >
-                          <option value="temp_read">อุณหภูมิ PV (°C)</option>
-                          <option value="ph_read">ค่า pH PV</option>
-                          <option value="do_read">ค่า DO PV (%)</option>
-                          <option value="agit_read">ความเร็วการกวน AGIT (RPM)</option>
-                          <option value="air_read">อัตราไหลลม AIR (L/M)</option>
-                        </select>
+                      {/* Select Parameter Multi-select Pills */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', paddingTop: '5px' }}>ตัวแปรที่วิเคราะห์:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          {COMPARE_PARAM_OPTIONS.map(opt => {
+                            const isSelected = compareParams.includes(opt.value);
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    if (compareParams.length > 1) setCompareParams(prev => prev.filter(p => p !== opt.value));
+                                  } else {
+                                    setCompareParams(prev => [...prev, opt.value]);
+                                  }
+                                }}
+                                style={{
+                                  padding: '4px 12px',
+                                  borderRadius: '20px',
+                                  border: isSelected ? '1px solid var(--accent-blue)' : '1px solid var(--border-color)',
+                                  background: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.04)',
+                                  color: isSelected ? '#60a5fa' : 'var(--text-secondary)',
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer',
+                                  fontWeight: isSelected ? 600 : 400,
+                                  transition: 'all 0.18s',
+                                  whiteSpace: 'nowrap',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                {isSelected && <span style={{ fontSize: '0.7rem' }}>✓</span>}{opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
@@ -3032,7 +3097,7 @@ function App() {
                             if (!job) return;
                             const machine = machines.find(m => m.id === job.machineId);
                             const mPrefix = machine ? `${machine.name} - ` : '';
-                            const lineKey = `${mPrefix}${job.name}`;
+                            const jobLabel = `${mPrefix}${job.name}`;
 
                             // Find earliest timestamp for cultureHour starting point
                             let minTimeMs = Infinity;
@@ -3047,9 +3112,6 @@ function App() {
 
                             if (job.data) {
                               job.data.forEach(row => {
-                                const val = row[compareParam];
-                                if (val === undefined || isNaN(parseFloat(val))) return;
-
                                 const t = row.timestamp ? new Date(row.timestamp).getTime() : NaN;
                                 const elapsed = isNaN(t) || minTimeMs === Infinity ? 0 : (t - minTimeMs) / 3600000;
                                 const roundedElapsed = Math.round(elapsed * 10) / 10;
@@ -3057,7 +3119,16 @@ function App() {
                                 if (!roundedPoints[roundedElapsed]) {
                                   roundedPoints[roundedElapsed] = { cultureHour: roundedElapsed };
                                 }
-                                roundedPoints[roundedElapsed][lineKey] = parseFloat(val);
+
+                                compareParams.forEach(param => {
+                                  const val = row[param];
+                                  if (val === undefined || isNaN(parseFloat(val))) return;
+                                  const paramLabel = COMPARE_PARAM_OPTIONS.find(o => o.value === param)?.label || param;
+                                  const lineKey = compareParams.length > 1
+                                    ? `${jobLabel} [${paramLabel}]`
+                                    : jobLabel;
+                                  roundedPoints[roundedElapsed][lineKey] = parseFloat(val);
+                                });
                               });
                             }
                           });
@@ -3072,12 +3143,7 @@ function App() {
                             labelFormatter={(val) => `ชั่วโมงเลี้ยงเชื้อ: ${val} ชม.`}
                           />
                           <Legend wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
-                          {selectedCompareJobIds.map((jobId, idx) => {
-                            const job = jobs.find(j => j.id === jobId);
-                            if (!job) return null;
-                            const machine = machines.find(m => m.id === job.machineId);
-                            const mPrefix = machine ? `${machine.name} - ` : '';
-                            const lineKey = `${mPrefix}${job.name}`;
+                          {(() => {
                             const COMPARE_COLORS = [
                               'var(--accent-red)',
                               'var(--accent-blue)',
@@ -3088,21 +3154,40 @@ function App() {
                               '#ec4899',
                               '#f43f5e',
                               '#14b8a6',
-                              '#84cc16'
+                              '#84cc16',
+                              '#fb923c',
+                              '#a78bfa',
                             ];
-                            return (
-                              <Line 
-                                key={jobId}
-                                type="monotone"
-                                dataKey={lineKey}
-                                name={lineKey}
-                                stroke={COMPARE_COLORS[idx % COMPARE_COLORS.length]}
-                                strokeWidth={3}
-                                dot={true}
-                                connectNulls={true}
-                              />
-                            );
-                          })}
+                            const lines = [];
+                            let colorIdx = 0;
+                            selectedCompareJobIds.forEach(jobId => {
+                              const job = jobs.find(j => j.id === jobId);
+                              if (!job) return;
+                              const machine = machines.find(m => m.id === job.machineId);
+                              const mPrefix = machine ? `${machine.name} - ` : '';
+                              const jobLabel = `${mPrefix}${job.name}`;
+                              compareParams.forEach(param => {
+                                const paramLabel = COMPARE_PARAM_OPTIONS.find(o => o.value === param)?.label || param;
+                                const lineKey = compareParams.length > 1
+                                  ? `${jobLabel} [${paramLabel}]`
+                                  : jobLabel;
+                                lines.push(
+                                  <Line
+                                    key={`${jobId}-${param}`}
+                                    type="monotone"
+                                    dataKey={lineKey}
+                                    name={lineKey}
+                                    stroke={COMPARE_COLORS[colorIdx % COMPARE_COLORS.length]}
+                                    strokeWidth={3}
+                                    dot={true}
+                                    connectNulls={true}
+                                  />
+                                );
+                                colorIdx++;
+                              });
+                            });
+                            return lines;
+                          })()}
                         </LineChart>
                       </ResponsiveContainer>
                     )}
@@ -3394,6 +3479,15 @@ function App() {
                 >
                   {theme === 'dark' ? '🌙' : '☀️'}
                 </button>
+                {currentJob && userRole === 'admin' && (
+                  <button
+                    className={`status-control-btn ${currentJob.status === 'stopped' ? 'btn-start-machine' : 'btn-stop-machine'}`}
+                    onClick={() => handleToggleJobStatus(currentJob.id, currentJob.status || 'running')}
+                    style={{ margin: 0, height: '38px', padding: '0 16px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+                  >
+                    {currentJob.status === 'stopped' ? '▶️ เริ่มเครื่อง' : '🛑 หยุดเครื่อง'}
+                  </button>
+                )}
                 <button
                   className={`toggle-btn ${isReplay ? 'active' : ''}`}
                   onClick={() => {
@@ -3441,8 +3535,14 @@ function App() {
 
             {currentJob && userRole === 'admin' && (
               /* Manual Input Form */
-              <div className="glass-panel form-container">
+              <div className={`glass-panel form-container ${currentJob.status === 'stopped' ? 'machine-stopped-mode' : ''}`}>
                 <h2 className="form-title">Manual Data Entry (Record Data {currentMachine?.name || 'เครื่องมือ'})</h2>
+                {currentJob.status === 'stopped' && (
+                  <div className="stopped-warning-banner">
+                    <span className="warning-icon">⚠️</span>
+                    <span>ขณะนี้เครื่องหยุดทำงานอยู่ (Machine is currently STOPPED)</span>
+                  </div>
+                )}
                 <form onSubmit={handleManualSubmit} className="data-form">
                   <div className="form-group-container">
                     <div className="form-group">
@@ -3638,6 +3738,9 @@ function App() {
                   chartData={chartData} 
                   isReplaying={isReplay} 
                   isReplayingPlaying={isReplayPlaying} 
+                  jobStatus={currentJob?.status || 'running'}
+                  onToggleStatus={() => handleToggleJobStatus(currentJob?.id, currentJob?.status || 'running')}
+                  userRole={userRole}
                 />
               ) : activeTab === 'dashboard' ? (
                 <>

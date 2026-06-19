@@ -584,6 +584,7 @@ app.post('/api/jobs', async (req, res) => {
     machineId,
     name: name.trim(),
     createdAt: new Date().toISOString(),
+    status: 'running',
     data: []
   };
 
@@ -635,6 +636,32 @@ app.put('/api/jobs/:id/expiry', async (req, res) => {
     const job = localDB.jobs.find(j => j.id === id);
     if (job) {
       job.expiresAt = expiresAt;
+      writeLocalDB(localDB);
+    }
+  }
+
+  res.json(await getDB());
+});
+
+app.put('/api/jobs/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (status !== 'running' && status !== 'stopped') {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  if (isCloud) {
+    try {
+      await db.collection(JOBS_COL).doc(id).update({ status });
+    } catch (e) {
+      console.error('Firestore error updating session status:', e);
+    }
+  } else {
+    const localDB = readLocalDB();
+    const job = localDB.jobs.find(j => j.id === id);
+    if (job) {
+      job.status = status;
       writeLocalDB(localDB);
     }
   }
