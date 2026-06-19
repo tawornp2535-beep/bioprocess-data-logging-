@@ -1980,6 +1980,13 @@ function App() {
           setFeedbackComment('');
           setFeedbackRating(5);
           setFeedbackSuccess(false);
+          // If logout was pending (customer clicked logout), do logout now
+          if (window._pendingLogout) {
+            window._pendingLogout = false;
+            setUserRole(null);
+            setActiveCustomerJobId(null);
+            setIsMobileMenuOpen(false);
+          }
         }, 1800);
       }
     } catch (err) {
@@ -2599,13 +2606,41 @@ function App() {
 
         {/* Footer */}
         <div className="sidebar-footer">
+          {/* Feedback Button - customer only */}
+          {userRole === 'customer' && (
+            <button
+              className="sidebar-logout-btn"
+              style={{ marginBottom: '0.5rem', background: 'linear-gradient(135deg, rgba(234,179,8,0.18), rgba(234,179,8,0.06))', borderColor: 'rgba(234,179,8,0.4)', color: '#fde68a' }}
+              onClick={() => {
+                setFeedbackJobId(activeCustomerJobId || null);
+                setFeedbackRating(5);
+                setFeedbackComment('');
+                setFeedbackSuccess(false);
+                setShowFeedbackModal(true);
+              }}
+            >
+              <Star size={16} />
+              ประเมินความพึงพอใจ
+            </button>
+          )}
           <button 
             className="sidebar-logout-btn"
             onClick={() => {
-              if (window.confirm("ยืนยันการออกจากระบบ?")) {
-                setUserRole(null);
-                setActiveCustomerJobId(null);
-                setIsMobileMenuOpen(false);
+              if (userRole === 'customer') {
+                // Show feedback before logout for customer
+                setFeedbackJobId(activeCustomerJobId || null);
+                setFeedbackRating(5);
+                setFeedbackComment('');
+                setFeedbackSuccess(false);
+                setShowFeedbackModal(true);
+                // Set a flag to logout after modal closes
+                window._pendingLogout = true;
+              } else {
+                if (window.confirm('ยืนยันการออกจากระบบ?')) {
+                  setUserRole(null);
+                  setActiveCustomerJobId(null);
+                  setIsMobileMenuOpen(false);
+                }
               }
             }}
           >
@@ -4725,14 +4760,30 @@ function App() {
 
       {/* Glassmorphic Feedback Modal */}
       {showFeedbackModal && (
-        <div className="modal-backdrop" onClick={() => setShowFeedbackModal(false)}>
+        <div className="modal-backdrop" onClick={() => {
+          setShowFeedbackModal(false);
+          if (window._pendingLogout) {
+            window._pendingLogout = false;
+            setUserRole(null);
+            setActiveCustomerJobId(null);
+            setIsMobileMenuOpen(false);
+          }
+        }}>
           <div className="modal-container" style={{ maxWidth: '420px', padding: '1.5rem 2rem' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ borderBottom: 'none', paddingBottom: 0 }}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Star size={22} color="var(--accent-yellow)" />
                 ประเมินความพึงพอใจ
               </h3>
-              <button className="modal-close-btn" onClick={() => setShowFeedbackModal(false)}>✕</button>
+              <button className="modal-close-btn" onClick={() => {
+                setShowFeedbackModal(false);
+                if (window._pendingLogout) {
+                  window._pendingLogout = false;
+                  setUserRole(null);
+                  setActiveCustomerJobId(null);
+                  setIsMobileMenuOpen(false);
+                }
+              }}>✕</button>
             </div>
             
             <div className="modal-body" style={{ marginTop: '1rem' }}>
@@ -4794,6 +4845,29 @@ function App() {
                   <button type="submit" className="submit-btn" style={{ width: '100%', height: '42px', marginTop: '4px' }}>
                     ส่งแบบประเมิน (Submit Rating)
                   </button>
+                  {window._pendingLogout && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowFeedbackModal(false);
+                        window._pendingLogout = false;
+                        setUserRole(null);
+                        setActiveCustomerJobId(null);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      style={{
+                        width: '100%', height: '36px', marginTop: '6px',
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '8px',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ข้ามการประเมินและออกจากระบบ
+                    </button>
+                  )}
                 </form>
               )}
             </div>
