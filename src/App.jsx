@@ -857,6 +857,7 @@ function App() {
   const [currentMachineId, setCurrentMachineId] = useState(null);
   const [jobs, setJobs] = useState([]);
   const [currentJobId, setCurrentJobId] = useState(null);
+  const [isViewingHistory, setIsViewingHistory] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -1298,7 +1299,8 @@ function App() {
     return getElapsedHours(currentJob, editingRowData.timestamp);
   };
   const lastDataPoint = chartData.length > 0 ? chartData[chartData.length - 1] : null;
-  const lastDataPointForDisplay = (currentJob?.status === 'finished' || !lastDataPoint) ? {
+  const showStandby = currentJob?.status === 'finished' && !isViewingHistory;
+  const lastDataPointForDisplay = (showStandby || !lastDataPoint) ? {
     temp_set: 0, temp_read: 0, temp: 0,
     ph_set: 0, ph_read: 0, ph: 0,
     do_set: 0, do_read: 0, do: 0,
@@ -1396,7 +1398,7 @@ function App() {
 
   // Pre-populate manual entry form with the last data point of the active session
   useEffect(() => {
-    if (currentJob?.status === 'finished') {
+    if (showStandby) {
       setFormData({
         temp_set: 0, temp_read: 0,
         ph_set: 0, ph_read: 0,
@@ -1462,7 +1464,7 @@ function App() {
         time: toHHMM(new Date())
       });
     }
-  }, [currentJobId, currentJob?.status, lastDataPoint === null]);
+  }, [currentJobId, showStandby, lastDataPoint === null]);
 
   // Helper to apply updated DB state
   const applyDBUpdate = (data) => {
@@ -1666,6 +1668,7 @@ function App() {
         setCurrentMachineId(newSessionMachineId);
       }
       setCurrentJobId(newJob.id);
+      setIsViewingHistory(false);
 
       // Show success screen inside wizard
       setWizardSuccessJobId(newJob.id);
@@ -1711,6 +1714,7 @@ function App() {
         if (res.ok) {
           const data = await res.json();
           applyDBUpdate(data);
+          setIsViewingHistory(false);
         } else {
           const errData = await res.json().catch(() => ({}));
           alert(errData.error || 'ไม่สามารถเสร็จสิ้นงานได้ กรุณาลองใหม่อีกครั้ง');
@@ -3127,6 +3131,7 @@ function App() {
                                     onClick={() => {
                                       setCurrentMachineId(job.machineId);
                                       setCurrentJobId(job.id);
+                                      setIsViewingHistory(job.status === 'finished');
                                       setCurrentAppView('monitoring');
                                       setActiveTab('dashboard');
                                     }}
@@ -3727,15 +3732,15 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     🖥️ <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>เครื่องมือ:</span>{' '}
-                    <span style={{ color: currentJob?.status === 'finished' ? 'var(--text-secondary)' : 'white' }}>
-                      {currentJob?.status === 'finished' ? 'สแตนบาย' : (currentMachine?.name || '—')}
+                    <span style={{ color: showStandby ? 'var(--text-secondary)' : 'white' }}>
+                      {showStandby ? 'สแตนบาย' : (currentMachine?.name || '—')}
                     </span>
                   </h2>
 
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     📁 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>รอบรัน:</span>{' '}
-                    <span style={{ color: currentJob?.status === 'finished' ? 'var(--text-secondary)' : 'var(--accent-blue)' }}>
-                      {currentJob?.status === 'finished' ? 'สแตนบาย' : (currentJob?.name || '—')}
+                    <span style={{ color: showStandby ? 'var(--text-secondary)' : 'var(--accent-blue)' }}>
+                      {showStandby ? 'สแตนบาย' : (currentJob?.name || '—')}
                     </span>
                   </h2>
                 </div>
@@ -3845,17 +3850,23 @@ function App() {
             {currentJob && userRole === 'admin' && (
               /* Manual Input Form */
               <div className={`glass-panel form-container ${currentJob.status === 'stopped' ? 'machine-stopped-mode' : ''} ${currentJob.status === 'finished' ? 'machine-finished-mode' : ''}`}>
-                <h2 className="form-title">Manual Data Entry (Record Data {currentJob?.status === 'finished' ? 'สแตนบาย' : (currentMachine?.name || 'เครื่องมือ')})</h2>
+                <h2 className="form-title">Manual Data Entry (Record Data {showStandby ? 'สแตนบาย' : (currentMachine?.name || 'เครื่องมือ')})</h2>
                 {currentJob.status === 'stopped' && (
                   <div className="stopped-warning-banner">
                     <span className="warning-icon">⚠️</span>
                     <span>ขณะนี้เครื่องหยุดทำงานอยู่ (Machine is currently STOPPED)</span>
                   </div>
                 )}
-                {currentJob.status === 'finished' && (
+                {showStandby && (
                   <div className="stopped-warning-banner" style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.25)', color: '#93c5fd' }}>
                     <span className="warning-icon">🏁</span>
                     <span>งานเสร็จสิ้นแล้ว เครื่องอยู่ในสถานะสแตนบาย (Job has finished. Machine is on STANDBY)</span>
+                  </div>
+                )}
+                {isViewingHistory && (
+                  <div className="stopped-warning-banner" style={{ background: 'rgba(148, 163, 184, 0.1)', borderColor: 'rgba(148, 163, 184, 0.25)', color: '#94a3b8' }}>
+                    <span className="warning-icon">📁</span>
+                    <span>ขณะนี้คุณกำลังดูข้อมูลย้อนหลังของรอบรันนี้ (Viewing historical data for this session)</span>
                   </div>
                 )}
                 <form onSubmit={handleManualSubmit} className="data-form">
