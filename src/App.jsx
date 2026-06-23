@@ -133,7 +133,10 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
   };
 
   const timestampStr = dataPoint.timestamp
-    ? new Date(dataPoint.timestamp).toLocaleString('th-TH')
+    ? (() => {
+        const d = new Date(dataPoint.timestamp);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+      })()
     : `${dataPoint.date || ''} ${dataPoint.time || ''}`;
 
   // Helper to draw inline SVG sparklines
@@ -772,12 +775,18 @@ function App() {
     if (isNaN(d.getTime())) return '';
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   };
+  const formatDateTime = (v) => {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return v;
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  };
   const formatCreatedAt = (v) => {
     if (!v) return '';
     if (v.includes(',') || !v.includes('T')) return v;
     const d = new Date(v);
     if (isNaN(d.getTime())) return v;
-    return d.toLocaleString('th-TH');
+    return formatDateTime(d);
   };
   // Authentication State
   const [userRole, setUserRole] = useState(() => {
@@ -1068,9 +1077,7 @@ function App() {
       const res = await fetch(`/api/db?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setMachines(data.machines);
-        setJobs(data.jobs);
-        setCustomers(data.customers);
+        applyDBUpdate(data);
         if (data.activeUsers) {
           setActiveUsers(data.activeUsers);
         }
@@ -1121,9 +1128,7 @@ function App() {
         }
 
         // Apply fresh DB
-        setMachines(data.machines);
-        setJobs(data.jobs);
-        setCustomers(data.customers);
+        applyDBUpdate(data);
         if (data.activeUsers) {
           setActiveUsers(data.activeUsers);
         }
@@ -1303,7 +1308,7 @@ function App() {
     return getElapsedHours(currentJob, editingRowData.timestamp);
   };
   const lastDataPoint = chartData.length > 0 ? chartData[chartData.length - 1] : null;
-  const showStandby = currentJob?.status === 'finished' && !isViewingHistory;
+  const showStandby = currentJob?.status === 'finished' && !isViewingHistory && userRole !== 'customer';
   const lastDataPointForDisplay = (showStandby || !lastDataPoint) ? {
     temp_set: 0, temp_read: 0, temp: 0,
     ph_set: 0, ph_read: 0, ph: 0,
@@ -2278,7 +2283,7 @@ function App() {
                   placeholder="รหัสผ่านแอดมิน"
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.5)', color: 'white' }}
                 />
-                <button type="submit" className="submit-btn" style={{ width: '100%', height: '40px' }}>เข้าสู่ระบบแอดมิน</button>
+                <button type="submit" className="btn btn-blue" style={{ width: '100%', margin: 0 }}>เข้าสู่ระบบแอดมิน</button>
               </form>
             </div>
 
@@ -2310,9 +2315,7 @@ function App() {
                     const ack = localStorage.getItem('bioprocess-customer-notice-ack') === 'true';
                     if (ack) {
                       // Apply fresh DB and grant access
-                      setMachines(data.machines);
-                      setJobs(data.jobs);
-                      setCustomers(data.customers);
+                      applyDBUpdate(data);
                       setActiveCustomerJobId(jobCode);
                       setUserRole('customer');
                       setCurrentAppView('monitoring');
@@ -2336,7 +2339,7 @@ function App() {
                   placeholder="ป้อนรหัสงานของคุณ (เช่น job-...)"
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.5)', color: 'white' }}
                 />
-                <button type="submit" className="submit-btn" style={{ width: '100%', height: '40px', background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)' }}>เข้าดูข้อมูลงาน</button>
+                <button type="submit" className="btn btn-blue" style={{ width: '100%', margin: 0 }}>เข้าดูข้อมูลงาน</button>
               </form>
             </div>
           </div>
@@ -2355,7 +2358,7 @@ function App() {
                   อย่าขึ้นเตือนอีก
                 </label>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                  <button onClick={() => { setShowCustomerNotice(false); setPendingJobCode(null); }} className="submit-btn" style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>ยกเลิก</button>
+                  <button onClick={() => { setShowCustomerNotice(false); setPendingJobCode(null); }} className="btn btn-secondary" style={{ margin: 0 }}>ยกเลิก</button>
                   <button onClick={async () => {
                     if (dontShowAgain) {
                       try { localStorage.setItem('bioprocess-customer-notice-ack', 'true'); } catch (e) { }
@@ -2365,9 +2368,7 @@ function App() {
                         const res = await fetch('/api/db');
                         if (res.ok) {
                           const data = await res.json();
-                          setMachines(data.machines);
-                          setJobs(data.jobs);
-                          setCustomers(data.customers);
+                          applyDBUpdate(data);
                         }
                       } catch (e) {
                         console.error('Failed to refresh DB before customer access', e);
@@ -2378,7 +2379,7 @@ function App() {
                     }
                     setShowCustomerNotice(false);
                     setPendingJobCode(null);
-                  }} className="submit-btn">ยอมรับและเข้าสู่ระบบ</button>
+                  }} className="btn btn-blue" style={{ margin: 0 }}>ยอมรับและเข้าสู่ระบบ</button>
                 </div>
               </div>
             </div>
@@ -2434,7 +2435,7 @@ function App() {
                 อย่าขึ้นเตือนอีก
               </label>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                <button onClick={() => { setShowCustomerNotice(false); setPendingJobCode(null); }} className="submit-btn" style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>ยกเลิก</button>
+                <button onClick={() => { setShowCustomerNotice(false); setPendingJobCode(null); }} className="btn btn-secondary" style={{ margin: 0 }}>ยกเลิก</button>
                 <button onClick={async () => {
                   if (dontShowAgain) {
                     try { localStorage.setItem('bioprocess-customer-notice-ack', 'true'); } catch (e) { }
@@ -2445,9 +2446,7 @@ function App() {
                       const res = await fetch('/api/db');
                       if (res.ok) {
                         const data = await res.json();
-                        setMachines(data.machines);
-                        setJobs(data.jobs);
-                        setCustomers(data.customers);
+                        applyDBUpdate(data);
                       }
                     } catch (e) {
                       console.error('Failed to refresh DB before customer access', e);
@@ -2458,7 +2457,7 @@ function App() {
                   }
                   setShowCustomerNotice(false);
                   setPendingJobCode(null);
-                }} className="submit-btn">ยอมรับและเข้าสู่ระบบ</button>
+                }} className="btn btn-blue" style={{ margin: 0 }}>ยอมรับและเข้าสู่ระบบ</button>
               </div>
             </div>
           </div>
@@ -2740,7 +2739,7 @@ function App() {
           <h1>Bioprocess Data Report</h1>
           <p><strong>Session Name:</strong> {currentJob?.name || '-'}</p>
           <p><strong>Instrument / Machine:</strong> {currentMachine?.name || '-'}</p>
-          <p><strong>Date Generated:</strong> {new Date().toLocaleString('th-TH')}</p>
+          <p><strong>Date Generated:</strong> {formatDateTime(new Date())}</p>
         </div>
         {currentAppView === 'customers' ? (
           /* CUSTOMER DATA VIEW */
@@ -2771,7 +2770,6 @@ function App() {
                     placeholder="customer@example.com"
                     value={customerFormData.email}
                     onChange={handleCustomerInputChange}
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', height: '40px' }}
                   />
                 </div>
 
@@ -2782,7 +2780,7 @@ function App() {
                     value={customerFormData.machineId}
                     onChange={handleCustomerInputChange}
                     className="machine-dropdown"
-                    style={{ padding: '10px', height: '42px', backgroundImage: 'none' }}
+                    style={{ backgroundImage: 'none' }}
                   >
                     {machines.map(m => (
                       <option key={m.id} value={m.id}>{m.name}</option>
@@ -2790,9 +2788,12 @@ function App() {
                   </select>
                 </div>
 
-                <button type="submit" className="submit-btn" style={{ height: '42px' }}>
-                  <Users size={18} style={{ marginRight: '8px' }} /> Add Customer
-                </button>
+                <div className="form-group" style={{ flex: 'none' }}>
+                  <label style={{ visibility: 'hidden' }}>Submit</label>
+                  <button type="submit" className="btn btn-primary" style={{ margin: 0, height: '42px' }}>
+                    <Users size={18} style={{ marginRight: '8px' }} /> Add Customer
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -2850,21 +2851,8 @@ function App() {
                                     ))}
                                   </select>
                                   <button
-                                    className="submit-btn"
-                                    style={{
-                                      padding: '4px 10px',
-                                      height: '32px',
-                                      fontSize: '0.85rem',
-                                      background: 'linear-gradient(135deg, #10b981, #059669)',
-                                      border: 'none',
-                                      borderRadius: '6px',
-                                      color: 'white',
-                                      cursor: 'pointer',
-                                      fontWeight: 600,
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px'
-                                    }}
+                                    className="btn btn-primary btn-small"
+                                    style={{ margin: 0 }}
                                     onClick={() => {
                                       const targetJob = custJobs.find(j => j.id === selectedJobId) || custJobs[0];
                                       setShareModalJobId(targetJob.id);
@@ -2906,19 +2894,8 @@ function App() {
                 </p>
               </div>
               <button
-                className="submit-btn"
-                style={{
-                  margin: 0,
-                  padding: '8px 16px',
-                  fontSize: '0.9rem',
-                  background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
+                className="btn btn-blue"
+                style={{ margin: 0 }}
                 onClick={() => {
                   setNewMachineName('');
                   setShowAddMachineModal(true);
@@ -3025,19 +3002,8 @@ function App() {
               {/* Header Actions */}
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
-                  className="submit-btn"
-                  style={{
-                    margin: 0,
-                    padding: '8px 16px',
-                    fontSize: '0.9rem',
-                    background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: 600,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
+                  className="btn btn-blue"
+                  style={{ margin: 0 }}
                   onClick={() => {
                     setNewSessionName(`Session ${jobs.length + 1}`);
                     setNewSessionMachineId(currentMachineId || machines[0]?.id);
@@ -3510,7 +3476,7 @@ function App() {
                   />
                 </div>
 
-                <button type="submit" className="submit-btn" style={{ width: '100%', height: '42px', marginTop: '0.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: 0, marginTop: '0.5rem' }}>
                   บันทึกการตั้งค่า (Update Password)
                 </button>
               </form>
@@ -3585,7 +3551,7 @@ function App() {
                       <span style={{ fontSize: '2.2rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
                         {total} <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>ราย</span>
                       </span>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Real-time จาก Firestore</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>อัปเดตแบบเรียลไทม์ (Real-time Sync)</span>
                     </div>
 
                     {/* Section Averages */}
@@ -3753,14 +3719,14 @@ function App() {
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     🖥️ <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>เครื่องมือ:</span>{' '}
                     <span style={{ color: showStandby ? 'var(--text-secondary)' : 'white' }}>
-                      {showStandby ? 'สแตนบาย' : (currentMachine?.name || '—')}
+                      {showStandby ? 'Standby' : (currentMachine?.name || '—')}
                     </span>
                   </h2>
 
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     📁 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>รอบรัน:</span>{' '}
                     <span style={{ color: showStandby ? 'var(--text-secondary)' : 'var(--accent-blue)' }}>
-                      {showStandby ? 'สแตนบาย' : (currentJob?.name || '—')}
+                      {showStandby ? 'Standby' : (currentJob?.name || '—')}
                     </span>
                   </h2>
                 </div>
@@ -3916,10 +3882,10 @@ function App() {
               </div>
             )}
 
-            {currentJob && userRole === 'admin' && (
+            {currentJob && userRole === 'admin' && !isViewingHistory && currentJob.status !== 'finished' && (
               /* Manual Input Form */
-              <div className={`glass-panel form-container ${currentJob.status === 'stopped' ? 'machine-stopped-mode' : ''} ${currentJob.status === 'finished' ? 'machine-finished-mode' : ''}`}>
-                <h2 className="form-title">Manual Data Entry (Record Data {showStandby ? 'สแตนบาย' : (currentMachine?.name || 'เครื่องมือ')})</h2>
+              <div className={`glass-panel form-container ${currentJob.status === 'stopped' ? 'machine-stopped-mode' : ''}`}>
+                <h2 className="form-title">Manual Data Entry (Record Data {showStandby ? 'Standby' : (currentMachine?.name || 'เครื่องมือ')})</h2>
                 {currentJob.status === 'stopped' && (
                   <div className="stopped-warning-banner">
                     <span className="warning-icon">⚠️</span>
@@ -3929,7 +3895,7 @@ function App() {
                 {showStandby && (
                   <div className="stopped-warning-banner" style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.25)', color: '#93c5fd' }}>
                     <span className="warning-icon">🏁</span>
-                    <span>งานเสร็จสิ้นแล้ว เครื่องอยู่ในสถานะสแตนบาย (Job has finished. Machine is on STANDBY)</span>
+                    <span>งานเสร็จสิ้นแล้ว เครื่องอยู่ในสถานะ Standby (Job has finished. Machine is on STANDBY)</span>
                   </div>
                 )}
                 {isViewingHistory && (
@@ -4112,7 +4078,7 @@ function App() {
 
                     {/* Date and Time are set automatically to current values */}
                   </div>
-                  <button type="submit" className="submit-btn" style={{ minWidth: '160px' }} disabled={currentJob?.status === 'finished'}>
+                  <button type="submit" className="btn btn-primary" style={{ minWidth: '160px', margin: 0 }} disabled={currentJob?.status === 'finished'}>
                     <PlusCircle size={18} style={{ marginRight: '8px' }} /> Add Record
                   </button>
                 </form>
@@ -4915,8 +4881,8 @@ function App() {
                 const expDate = new Date(job.expiresAt);
                 isExpired = expDate < new Date();
                 expiryStatusText = isExpired
-                  ? `หมดอายุแล้วเมื่อ ${expDate.toLocaleString('th-TH')}`
-                  : `หมดอายุวันที่ ${expDate.toLocaleString('th-TH')}`;
+                  ? `หมดอายุแล้วเมื่อ ${formatDateTime(expDate)}`
+                  : `หมดอายุวันที่ ${formatDateTime(expDate)}`;
               }
 
               // Look up customer assigned to this machine
@@ -4925,7 +4891,7 @@ function App() {
 
               // Email invitation body template
               const customerName = assignedCustomer ? assignedCustomer.companyName : "[ชื่อลูกค้า]";
-              const expiryInfoText = job.expiresAt ? new Date(job.expiresAt).toLocaleString('th-TH') : "ไม่มีวันหมดอายุ";
+              const expiryInfoText = job.expiresAt ? formatDateTime(job.expiresAt) : "ไม่มีวันหมดอายุ";
               const invitationText = `เรียนคุณ ${customerName},\n\nทางแล็บขอส่งลิงก์สำหรับเข้าดูข้อมูลไบโอโพรเซสรอบรัน "${job.name}" (${machine?.name || 'เครื่องมือ'}) แบบเรียลไทม์\n\nลิงก์เข้าสู่ระบบ: ${loginUrl}\nวันหมดอายุ: ${expiryInfoText}\n\nขอบคุณค่ะ/ครับ\nDBMS System`;
 
               return (
@@ -4955,8 +4921,8 @@ function App() {
                         onClick={(e) => e.target.select()}
                       />
                       <button
-                        className="submit-btn"
-                        style={{ margin: 0, padding: '0 16px', background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)' }}
+                        className="btn btn-blue"
+                        style={{ margin: 0 }}
                         onClick={async () => {
                           await navigator.clipboard.writeText(loginUrl);
                           alert("คัดลอกลิงก์เรียบร้อยแล้ว!");
@@ -5055,18 +5021,8 @@ function App() {
                       {assignedCustomer && (
                         <button
                           type="button"
-                          className="submit-btn"
-                          style={{
-                            margin: 0,
-                            padding: '4px 8px',
-                            fontSize: '0.75rem',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            border: '1px solid rgba(16, 185, 129, 0.3)',
-                            color: 'var(--accent-green)',
-                            borderRadius: '4px',
-                            height: 'auto',
-                            fontWeight: 600
-                          }}
+                          className="btn btn-primary btn-small"
+                          style={{ margin: 0 }}
                           onClick={async () => {
                             await navigator.clipboard.writeText(invitationText);
                             alert("คัดลอกข้อความคำเชิญสำหรับส่งให้ลูกค้าเรียบร้อยแล้ว!");
@@ -5138,6 +5094,7 @@ function App() {
         });
 
         const scoreLabels = { 5: 'มากที่สุด', 4: 'มาก', 3: 'ปานกลาง', 2: 'น้อย', 1: 'น้อยที่สุด' };
+        const shortScoreLabels = { 5: 'มากสุด', 4: 'มาก', 3: 'กลาง', 2: 'น้อย', 1: 'น้อยสุด' };
         const scoreColors = { 5: '#22c55e', 4: '#84cc16', 3: '#eab308', 2: '#f97316', 1: '#ef4444' };
 
         const toggleChannel = (ch) => {
@@ -5197,7 +5154,7 @@ function App() {
                     {/* Score Table Header */}
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 40px 40px 40px 40px 40px',
+                      gridTemplateColumns: '1fr 48px 48px 48px 48px 48px',
                       gap: '4px',
                       alignItems: 'center',
                       padding: '8px 10px',
@@ -5211,7 +5168,7 @@ function App() {
                     }}>
                       <span>หัวข้อการประเมิน</span>
                       {[5, 4, 3, 2, 1].map(s => (
-                        <span key={s} style={{ textAlign: 'center', color: scoreColors[s] }}>{s}<br /><span style={{ fontSize: '0.6rem', fontWeight: 400 }}>{scoreLabels[s].substring(0, 3)}</span></span>
+                        <span key={s} style={{ textAlign: 'center', color: scoreColors[s] }}>{s}<br /><span style={{ fontSize: '0.65rem', fontWeight: 400 }}>{shortScoreLabels[s]}</span></span>
                       ))}
                     </div>
 
@@ -5238,7 +5195,7 @@ function App() {
                         {sec.questions.map((q, qi) => (
                           <div key={q.id} style={{
                             display: 'grid',
-                            gridTemplateColumns: '1fr 40px 40px 40px 40px 40px',
+                            gridTemplateColumns: '1fr 48px 48px 48px 48px 48px',
                             gap: '4px',
                             alignItems: 'center',
                             padding: '8px 10px',
@@ -5347,7 +5304,7 @@ function App() {
 
                     {/* Submit Button */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>
-                      <button type="submit" className="submit-btn" style={{ width: '100%', height: '44px' }}>
+                      <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px', margin: 0 }}>
                         ✅ ส่งแบบประเมิน
                       </button>
                       {window._pendingLogout && (
@@ -5447,8 +5404,8 @@ function App() {
                           onClick={(e) => e.target.select()}
                         />
                         <button
-                          className="submit-btn"
-                          style={{ margin: 0, padding: '0 16px', background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)' }}
+                          className="btn btn-blue"
+                          style={{ margin: 0 }}
                           onClick={async () => {
                             await navigator.clipboard.writeText(loginUrl);
                             alert("คัดลอกลิงก์สำเร็จ!");
@@ -5465,18 +5422,8 @@ function App() {
                         <label className="modal-label" style={{ margin: 0 }}>📋 ข้อความคำเชิญสำหรับลูกค้า</label>
                         <button
                           type="button"
-                          className="submit-btn"
-                          style={{
-                            margin: 0,
-                            padding: '4px 8px',
-                            fontSize: '0.75rem',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            border: '1px solid rgba(16, 185, 129, 0.3)',
-                            color: 'var(--accent-green)',
-                            borderRadius: '4px',
-                            height: 'auto',
-                            fontWeight: 600
-                          }}
+                          className="btn btn-primary btn-small"
+                          style={{ margin: 0 }}
                           onClick={async () => {
                             await navigator.clipboard.writeText(invitationText);
                             alert("คัดลอกข้อความคำเชิญสำเร็จ!");
@@ -5493,8 +5440,8 @@ function App() {
                     {/* Actions */}
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
                       <button
-                        className="submit-btn"
-                        style={{ background: 'linear-gradient(135deg, var(--accent-green), #059669)', border: 'none', color: '#fff', padding: '10px 24px', fontSize: '0.95rem', margin: 0 }}
+                        className="btn btn-primary"
+                        style={{ margin: 0 }}
                         onClick={() => {
                           setCurrentMachineId(job.machineId);
                           setCurrentJobId(job.id);
@@ -5637,16 +5584,14 @@ function App() {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
                   <button
                     type="button"
-                    className="submit-btn"
-                    style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', margin: 0 }}
+                    className="btn btn-secondary"
                     onClick={() => setShowAddSessionModal(false)}
                   >
                     ยกเลิก (Cancel)
                   </button>
                   <button
                     type="submit"
-                    className="submit-btn"
-                    style={{ background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)', border: 'none', color: '#fff', margin: 0 }}
+                    className="btn btn-blue"
                   >
                     สร้างและบันทึกข้อมูล (Create & Setup)
                   </button>
@@ -5699,16 +5644,14 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
                 <button
                   type="button"
-                  className="submit-btn"
-                  style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)', margin: 0 }}
+                  className="btn btn-secondary"
                   onClick={() => setShowAddMachineModal(false)}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="submit-btn"
-                  style={{ background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)', border: 'none', color: '#fff', margin: 0 }}
+                  className="btn btn-blue"
                 >
                   สร้างเครื่องมือใหม่
                 </button>

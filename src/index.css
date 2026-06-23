@@ -46,7 +46,7 @@
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'IBM Plex Sans Thai', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
@@ -631,6 +631,28 @@ body {
   gap: 1rem;
   align-items: flex-end;
   width: 100%;
+}
+
+.customer-add-form input,
+.customer-add-form select {
+  background-color: var(--bg-color) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  padding: 10px 12px !important;
+  border-radius: 8px !important;
+  font-family: inherit !important;
+  font-size: 0.9rem !important;
+  height: 42px !important;
+  width: 100% !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.customer-add-form input:focus,
+.customer-add-form select:focus {
+  outline: none !important;
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
 }
 
 @keyframes fadeIn {
