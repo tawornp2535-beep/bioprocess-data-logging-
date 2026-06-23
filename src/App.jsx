@@ -1024,7 +1024,10 @@ function App() {
     ph: true,
     do: true,
     agit: true,
-    air: true
+    air: true,
+    level: true,
+    air_out: true,
+    heat: true
   });
 
   const [customerFormData, setCustomerFormData] = useState({
@@ -2145,15 +2148,18 @@ function App() {
     link.click();
     document.body.removeChild(link);
     if (userRole === 'customer') {
-      setTimeout(() => {
-        setFeedbackJobId(job.id);
-        setFeedbackScores(initScores());
-        setFeedbackChannels([]);
-        setFeedbackTools([]);
-        setFeedbackSuggestion('');
-        setFeedbackSuccess(false);
-        setShowFeedbackModal(true);
-      }, 800);
+      const alreadyReviewed = feedbacks.some(f => f.jobId === job.id);
+      if (!alreadyReviewed) {
+        setTimeout(() => {
+          setFeedbackJobId(job.id);
+          setFeedbackScores(initScores());
+          setFeedbackChannels([]);
+          setFeedbackTools([]);
+          setFeedbackSuggestion('');
+          setFeedbackSuccess(false);
+          setShowFeedbackModal(true);
+        }, 800);
+      }
     }
   };
 
@@ -2211,15 +2217,18 @@ function App() {
     const safeName = job.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     XLSX.writeFile(workbook, `${safeName}_data.xlsx`);
     if (userRole === 'customer') {
-      setTimeout(() => {
-        setFeedbackJobId(job.id);
-        setFeedbackScores(initScores());
-        setFeedbackChannels([]);
-        setFeedbackTools([]);
-        setFeedbackSuggestion('');
-        setFeedbackSuccess(false);
-        setShowFeedbackModal(true);
-      }, 800);
+      const alreadyReviewed = feedbacks.some(f => f.jobId === job.id);
+      if (!alreadyReviewed) {
+        setTimeout(() => {
+          setFeedbackJobId(job.id);
+          setFeedbackScores(initScores());
+          setFeedbackChannels([]);
+          setFeedbackTools([]);
+          setFeedbackSuggestion('');
+          setFeedbackSuccess(false);
+          setShowFeedbackModal(true);
+        }, 800);
+      }
     }
   };
 
@@ -2690,16 +2699,23 @@ function App() {
             className="sidebar-logout-btn"
             onClick={() => {
               if (userRole === 'customer') {
-                // Show feedback before logout for customer
-                setFeedbackJobId(activeCustomerJobId || null);
-                setFeedbackScores(initScores());
-                setFeedbackChannels([]);
-                setFeedbackTools([]);
-                setFeedbackSuggestion('');
-                setFeedbackSuccess(false);
-                setShowFeedbackModal(true);
-                // Set a flag to logout after modal closes
-                window._pendingLogout = true;
+                const alreadyReviewed = feedbacks.some(f => f.jobId === activeCustomerJobId);
+                if (alreadyReviewed) {
+                  setUserRole(null);
+                  setActiveCustomerJobId(null);
+                  setIsMobileMenuOpen(false);
+                } else {
+                  // Show feedback before logout for customer
+                  setFeedbackJobId(activeCustomerJobId || null);
+                  setFeedbackScores(initScores());
+                  setFeedbackChannels([]);
+                  setFeedbackTools([]);
+                  setFeedbackSuggestion('');
+                  setFeedbackSuccess(false);
+                  setShowFeedbackModal(true);
+                  // Set a flag to logout after modal closes
+                  window._pendingLogout = true;
+                }
               } else {
                 if (window.confirm('ยืนยันการออกจากระบบ?')) {
                   setUserRole(null);
@@ -3849,6 +3865,55 @@ function App() {
               </div>
             </header>
 
+            {/* Global Parameter Visibility Selector Bar */}
+            {currentJob && (
+              <div className="glass-panel" style={{ padding: '0.75rem 1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  ⚙️ แสดงค่าพารามิเตอร์:
+                </span>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {[
+                    { key: 'temp', label: 'TEMP', color: 'var(--accent-red)' },
+                    { key: 'ph', label: 'pH', color: 'var(--accent-blue)' },
+                    { key: 'do', label: 'DO', color: 'var(--accent-green)' },
+                    { key: 'agit', label: 'AGIT', color: 'var(--accent-yellow)' },
+                    { key: 'air', label: 'AIR FLOW', color: 'var(--accent-purple)' },
+                    { key: 'level', label: 'VOLUME', color: 'var(--accent-green)' },
+                    { key: 'air_out', label: 'AIR OUT', color: 'var(--accent-blue)' },
+                    { key: 'heat', label: 'HEAT', color: 'var(--accent-yellow)' }
+                  ].map(p => {
+                    const active = visibleParameters[p.key];
+                    return (
+                      <button
+                        key={p.key}
+                        onClick={() => setVisibleParameters(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
+                        style={{
+                          background: active ? `rgba(255,255,255,0.08)` : 'transparent',
+                          borderColor: active ? p.color : 'var(--border-color)',
+                          color: active ? 'white' : 'var(--text-secondary)',
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                          borderRadius: '20px',
+                          padding: '4px 12px',
+                          fontSize: '0.8rem',
+                          fontWeight: active ? 600 : 400,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s ease',
+                          margin: 0
+                        }}
+                      >
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: active ? p.color : 'transparent', border: active ? 'none' : '1px solid var(--text-secondary)' }}></span>
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {currentJob && userRole === 'admin' && (
               /* Manual Input Form */
               <div className={`glass-panel form-container ${currentJob.status === 'stopped' ? 'machine-stopped-mode' : ''} ${currentJob.status === 'finished' ? 'machine-finished-mode' : ''}`}>
@@ -4078,66 +4143,76 @@ function App() {
                 <>
                   {/* Real-time Metrics Grid */}
                   <div className="metrics-grid">
-                    <div className="glass-panel metric-card">
-                      <Thermometer color="var(--accent-red)" size={24} style={{ marginBottom: '10px' }} />
-                      <div className="metric-title">Temperature</div>
-                      <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div className="metric-value" style={{ color: 'var(--accent-red)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {typeof (lastDataPointForDisplay.temp_read !== undefined ? lastDataPointForDisplay.temp_read : lastDataPointForDisplay?.temp) === 'number' ? ((lastDataPointForDisplay.temp_read !== undefined ? lastDataPointForDisplay.temp_read : lastDataPointForDisplay?.temp) || 0).toFixed(2) : '-'}<span className="metric-unit">°C</span>
-                        </div>
-                        <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {typeof (lastDataPointForDisplay.temp_set !== undefined ? lastDataPointForDisplay.temp_set : lastDataPointForDisplay?.temp) === 'number' ? ((lastDataPointForDisplay.temp_set !== undefined ? lastDataPointForDisplay.temp_set : lastDataPointForDisplay?.temp) || 0).toFixed(2) : '-'}°C
-                        </div>
-                      </div>
-                    </div>
-                    <div className="glass-panel metric-card">
-                      <Droplets color="var(--accent-blue)" size={24} style={{ marginBottom: '10px' }} />
-                      <div className="metric-title">pH Level</div>
-                      <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div className="metric-value" style={{ color: 'var(--accent-blue)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {typeof (lastDataPointForDisplay.ph_read !== undefined ? lastDataPointForDisplay.ph_read : lastDataPointForDisplay?.ph) === 'number' ? ((lastDataPointForDisplay.ph_read !== undefined ? lastDataPointForDisplay.ph_read : lastDataPointForDisplay?.ph) || 0).toFixed(2) : '-'}
-                        </div>
-                        <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {typeof (lastDataPointForDisplay.ph_set !== undefined ? lastDataPointForDisplay.ph_set : lastDataPointForDisplay?.ph) === 'number' ? ((lastDataPointForDisplay.ph_set !== undefined ? lastDataPointForDisplay.ph_set : lastDataPointForDisplay?.ph) || 0).toFixed(2) : '-'}
+                    {visibleParameters.temp && (
+                      <div className="glass-panel metric-card">
+                        <Thermometer color="var(--accent-red)" size={24} style={{ marginBottom: '10px' }} />
+                        <div className="metric-title">Temperature</div>
+                        <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div className="metric-value" style={{ color: 'var(--accent-red)', fontSize: '2.2rem', lineHeight: 1.1 }}>
+                            {typeof (lastDataPointForDisplay.temp_read !== undefined ? lastDataPointForDisplay.temp_read : lastDataPointForDisplay?.temp) === 'number' ? ((lastDataPointForDisplay.temp_read !== undefined ? lastDataPointForDisplay.temp_read : lastDataPointForDisplay?.temp) || 0).toFixed(2) : '-'}<span className="metric-unit">°C</span>
+                          </div>
+                          <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            SV (Set): {typeof (lastDataPointForDisplay.temp_set !== undefined ? lastDataPointForDisplay.temp_set : lastDataPointForDisplay?.temp) === 'number' ? ((lastDataPointForDisplay.temp_set !== undefined ? lastDataPointForDisplay.temp_set : lastDataPointForDisplay?.temp) || 0).toFixed(2) : '-'}°C
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="glass-panel metric-card">
-                      <Activity color="var(--accent-green)" size={24} style={{ marginBottom: '10px' }} />
-                      <div className="metric-title">Dissolved Oxygen</div>
-                      <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div className="metric-value" style={{ color: 'var(--accent-green)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {lastDataPointForDisplay.do_read !== undefined ? lastDataPointForDisplay.do_read : lastDataPointForDisplay.do}<span className="metric-unit">%</span>
-                        </div>
-                        <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {lastDataPointForDisplay.do_set !== undefined ? lastDataPointForDisplay.do_set : lastDataPointForDisplay.do}%
-                        </div>
-                      </div>
-                    </div>
-                    <div className="glass-panel metric-card">
-                      <RotateCw color="var(--accent-yellow)" size={24} style={{ marginBottom: '10px' }} />
-                      <div className="metric-title">Agitation</div>
-                      <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div className="metric-value" style={{ color: 'var(--accent-yellow)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {lastDataPointForDisplay.agit_read !== undefined ? lastDataPointForDisplay.agit_read : lastDataPointForDisplay.agit}<span className="metric-unit">RPM</span>
-                        </div>
-                        <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {lastDataPointForDisplay.agit_set !== undefined ? lastDataPointForDisplay.agit_set : lastDataPointForDisplay.agit} RPM
+                    )}
+                    {visibleParameters.ph && (
+                      <div className="glass-panel metric-card">
+                        <Droplets color="var(--accent-blue)" size={24} style={{ marginBottom: '10px' }} />
+                        <div className="metric-title">pH Level</div>
+                        <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div className="metric-value" style={{ color: 'var(--accent-blue)', fontSize: '2.2rem', lineHeight: 1.1 }}>
+                            {typeof (lastDataPointForDisplay.ph_read !== undefined ? lastDataPointForDisplay.ph_read : lastDataPointForDisplay?.ph) === 'number' ? ((lastDataPointForDisplay.ph_read !== undefined ? lastDataPointForDisplay.ph_read : lastDataPointForDisplay?.ph) || 0).toFixed(2) : '-'}
+                          </div>
+                          <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            SV (Set): {typeof (lastDataPointForDisplay.ph_set !== undefined ? lastDataPointForDisplay.ph_set : lastDataPointForDisplay?.ph) === 'number' ? ((lastDataPointForDisplay.ph_set !== undefined ? lastDataPointForDisplay.ph_set : lastDataPointForDisplay?.ph) || 0).toFixed(2) : '-'}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="glass-panel metric-card">
-                      <Wind color="var(--accent-purple)" size={24} style={{ marginBottom: '10px' }} />
-                      <div className="metric-title">Air Flow</div>
-                      <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div className="metric-value" style={{ color: 'var(--accent-purple)', fontSize: '2.2rem', lineHeight: 1.1 }}>
-                          {typeof (lastDataPointForDisplay.air_read !== undefined ? lastDataPointForDisplay.air_read : lastDataPointForDisplay?.air) === 'number' ? ((lastDataPointForDisplay.air_read !== undefined ? lastDataPointForDisplay.air_read : lastDataPointForDisplay?.air) || 0).toFixed(1) : '-'}<span className="metric-unit">L/M</span>
-                        </div>
-                        <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                          SV (Set): {typeof (lastDataPointForDisplay.air_set !== undefined ? lastDataPointForDisplay.air_set : lastDataPointForDisplay?.air) === 'number' ? ((lastDataPointForDisplay.air_set !== undefined ? lastDataPointForDisplay.air_set : lastDataPointForDisplay?.air) || 0).toFixed(1) : '-'} L/M
+                    )}
+                    {visibleParameters.do && (
+                      <div className="glass-panel metric-card">
+                        <Activity color="var(--accent-green)" size={24} style={{ marginBottom: '10px' }} />
+                        <div className="metric-title">Dissolved Oxygen</div>
+                        <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div className="metric-value" style={{ color: 'var(--accent-green)', fontSize: '2.2rem', lineHeight: 1.1 }}>
+                            {lastDataPointForDisplay.do_read !== undefined ? lastDataPointForDisplay.do_read : lastDataPointForDisplay.do}<span className="metric-unit">%</span>
+                          </div>
+                          <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            SV (Set): {lastDataPointForDisplay.do_set !== undefined ? lastDataPointForDisplay.do_set : lastDataPointForDisplay.do}%
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
+                    {visibleParameters.agit && (
+                      <div className="glass-panel metric-card">
+                        <RotateCw color="var(--accent-yellow)" size={24} style={{ marginBottom: '10px' }} />
+                        <div className="metric-title">Agitation</div>
+                        <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div className="metric-value" style={{ color: 'var(--accent-yellow)', fontSize: '2.2rem', lineHeight: 1.1 }}>
+                            {lastDataPointForDisplay.agit_read !== undefined ? lastDataPointForDisplay.agit_read : lastDataPointForDisplay.agit}<span className="metric-unit">RPM</span>
+                          </div>
+                          <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            SV (Set): {lastDataPointForDisplay.agit_set !== undefined ? lastDataPointForDisplay.agit_set : lastDataPointForDisplay.agit} RPM
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {visibleParameters.air && (
+                      <div className="glass-panel metric-card">
+                        <Wind color="var(--accent-purple)" size={24} style={{ marginBottom: '10px' }} />
+                        <div className="metric-title">Air Flow</div>
+                        <div className="metric-value-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div className="metric-value" style={{ color: 'var(--accent-purple)', fontSize: '2.2rem', lineHeight: 1.1 }}>
+                            {typeof (lastDataPointForDisplay.air_read !== undefined ? lastDataPointForDisplay.air_read : lastDataPointForDisplay?.air) === 'number' ? ((lastDataPointForDisplay.air_read !== undefined ? lastDataPointForDisplay.air_read : lastDataPointForDisplay?.air) || 0).toFixed(1) : '-'}<span className="metric-unit">L/M</span>
+                          </div>
+                          <div className="metric-value-sv" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                            SV (Set): {typeof (lastDataPointForDisplay.air_set !== undefined ? lastDataPointForDisplay.air_set : lastDataPointForDisplay?.air) === 'number' ? ((lastDataPointForDisplay.air_set !== undefined ? lastDataPointForDisplay.air_set : lastDataPointForDisplay?.air) || 0).toFixed(1) : '-'} L/M
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Charts Grid */}
@@ -4324,34 +4399,66 @@ function App() {
                           <th rowSpan="2" style={{ verticalAlign: 'middle', textAlign: 'center', cursor: 'pointer' }} onClick={() => toggleSort('cultureHour')}>
                             ชั่วโมงที่ {sortField === 'cultureHour' ? (sortAsc ? '▲' : '▼') : ''}
                           </th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-red)' }}>Temp (°C)</th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-blue)' }}>pH</th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-green)' }}>DO (%)</th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-yellow)' }}>AGIT (RPM)</th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-purple)' }}>AIR (L/M)</th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-green)' }}>VOLUME (%)</th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-purple)' }}>AIR OUT (PMa)</th>
-                          <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-yellow)' }}>HEAT (%)</th>
+                          {visibleParameters.temp && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-red)' }}>Temp (°C)</th>}
+                          {visibleParameters.ph && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-blue)' }}>pH</th>}
+                          {visibleParameters.do && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-green)' }}>DO (%)</th>}
+                          {visibleParameters.agit && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-yellow)' }}>AGIT (RPM)</th>}
+                          {visibleParameters.air && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-purple)' }}>AIR (L/M)</th>}
+                          {visibleParameters.level && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-green)' }}>VOLUME (%)</th>}
+                          {visibleParameters.air_out && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-purple)' }}>AIR OUT (PMa)</th>}
+                          {visibleParameters.heat && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-yellow)' }}>HEAT (%)</th>}
                           <th rowSpan="2" style={{ verticalAlign: 'middle', textAlign: 'left', padding: '12px', minWidth: '150px' }}>Remarks / บันทึก</th>
                           {userRole === 'admin' && <th rowSpan="2" style={{ width: '80px', textAlign: 'center', verticalAlign: 'middle' }}>Action</th>}
                         </tr>
                         <tr>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
-                          <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                          {visibleParameters.temp && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
+                          {visibleParameters.ph && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
+                          {visibleParameters.do && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
+                          {visibleParameters.agit && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
+                          {visibleParameters.air && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
+                          {visibleParameters.level && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
+                          {visibleParameters.air_out && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
+                          {visibleParameters.heat && (
+                            <>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>SV</th>
+                              <th style={{ textAlign: 'center', fontSize: '0.75rem', padding: '6px' }}>PV</th>
+                            </>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -4364,6 +4471,7 @@ function App() {
                                   value={editingRowData.date}
                                   onChange={(e) => handleEditChange('date', e.target.value)}
                                   style={{ padding: '6px 4px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '115px' }}
+                                  required
                                 />
                               </td>
                               <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -4372,155 +4480,188 @@ function App() {
                                   value={editingRowData.time}
                                   onChange={(e) => handleEditChange('time', e.target.value)}
                                   style={{ padding: '6px 4px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '85px' }}
+                                  required
                                 />
                               </td>
                               <td style={{ textAlign: 'center', padding: '6px', color: 'var(--text-secondary)' }}>
                                 {getEditingRowCultureHour()} ชม.
                               </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={editingRowData.temp_set}
-                                  onChange={(e) => handleEditChange('temp_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={editingRowData.temp_read}
-                                  onChange={(e) => handleEditChange('temp_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-red)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={editingRowData.ph_set}
-                                  onChange={(e) => handleEditChange('ph_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={editingRowData.ph_read}
-                                  onChange={(e) => handleEditChange('ph_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  value={editingRowData.do_set}
-                                  onChange={(e) => handleEditChange('do_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '40px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  value={editingRowData.do_read}
-                                  onChange={(e) => handleEditChange('do_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '40px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  value={editingRowData.agit_set}
-                                  onChange={(e) => handleEditChange('agit_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  value={editingRowData.agit_read}
-                                  onChange={(e) => handleEditChange('agit_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={editingRowData.air_set}
-                                  onChange={(e) => handleEditChange('air_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={editingRowData.air_read}
-                                  onChange={(e) => handleEditChange('air_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={editingRowData.level_set}
-                                  onChange={(e) => handleEditChange('level_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={editingRowData.level_read}
-                                  onChange={(e) => handleEditChange('level_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={editingRowData.air_out_set}
-                                  onChange={(e) => handleEditChange('air_out_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  value={editingRowData.air_out_read}
-                                  onChange={(e) => handleEditChange('air_out_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  value={editingRowData.heat_set}
-                                  onChange={(e) => handleEditChange('heat_set', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  value={editingRowData.heat_read}
-                                  onChange={(e) => handleEditChange('heat_read', parseFloat(e.target.value) || 0)}
-                                  style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
-                                />
-                              </td>
+                              {visibleParameters.temp && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={editingRowData.temp_set}
+                                      onChange={(e) => handleEditChange('temp_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={editingRowData.temp_read}
+                                      onChange={(e) => handleEditChange('temp_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-red)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {visibleParameters.ph && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={editingRowData.ph_set}
+                                      onChange={(e) => handleEditChange('ph_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={editingRowData.ph_read}
+                                      onChange={(e) => handleEditChange('ph_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {visibleParameters.do && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      value={editingRowData.do_set}
+                                      onChange={(e) => handleEditChange('do_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '40px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      value={editingRowData.do_read}
+                                      onChange={(e) => handleEditChange('do_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '40px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {visibleParameters.agit && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      value={editingRowData.agit_set}
+                                      onChange={(e) => handleEditChange('agit_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      value={editingRowData.agit_read}
+                                      onChange={(e) => handleEditChange('agit_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {visibleParameters.air && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={editingRowData.air_set}
+                                      onChange={(e) => handleEditChange('air_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={editingRowData.air_read}
+                                      onChange={(e) => handleEditChange('air_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {visibleParameters.level && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={editingRowData.level_set}
+                                      onChange={(e) => handleEditChange('level_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={editingRowData.level_read}
+                                      onChange={(e) => handleEditChange('level_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {visibleParameters.air_out && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={editingRowData.air_out_set}
+                                      onChange={(e) => handleEditChange('air_out_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={editingRowData.air_out_read}
+                                      onChange={(e) => handleEditChange('air_out_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {visibleParameters.heat && (
+                                <>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      value={editingRowData.heat_set}
+                                      onChange={(e) => handleEditChange('heat_set', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                    />
+                                  </td>
+                                  <td style={{ textAlign: 'center', padding: '6px' }}>
+                                    <input
+                                      type="number"
+                                      step="1"
+                                      value={editingRowData.heat_read}
+                                      onChange={(e) => handleEditChange('heat_read', parseFloat(e.target.value) || 0)}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                    />
+                                  </td>
+                                </>
+                              )}
                               <td style={{ textAlign: 'left', padding: '6px' }}>
                                 <input
                                   type="text"
@@ -4557,22 +4698,54 @@ function App() {
                               <td style={{ textAlign: 'center' }}>{row.timestamp ? toYYYYMMDD(row.timestamp) : (row.date || '')}</td>
                               <td style={{ textAlign: 'center' }}>{row.timestamp ? toHHMM(row.timestamp) : (row.time || '')}</td>
                               <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.cultureHour !== undefined ? `${row.cultureHour} ชม.` : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.temp_set === 'number' ? row.temp_set.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-red)', fontWeight: 600 }}>{typeof row.temp_read === 'number' ? row.temp_read.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.ph_set === 'number' ? row.ph_set.toFixed(2) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-blue)', fontWeight: 600 }}>{typeof row.ph_read === 'number' ? row.ph_read.toFixed(2) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.do_set || '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{row.do_read || '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.agit_set || '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-yellow)', fontWeight: 600 }}>{row.agit_read || '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.air_set === 'number' ? row.air_set.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-purple)', fontWeight: 600 }}>{typeof row.air_read === 'number' ? row.air_read.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? row.level_set.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? row.level_read.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.air_out_set === 'number' ? row.air_out_set.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-purple)', fontWeight: 600 }}>{typeof row.air_out_read === 'number' ? row.air_out_read.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.heat_set === 'number' ? row.heat_set.toFixed(1) : '-'}</td>
-                              <td style={{ textAlign: 'center', color: 'var(--accent-yellow)', fontWeight: 600 }}>{typeof row.heat_read === 'number' ? row.heat_read.toFixed(1) : '-'}</td>
+                              {visibleParameters.temp && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.temp_set === 'number' ? row.temp_set.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-red)', fontWeight: 600 }}>{typeof row.temp_read === 'number' ? row.temp_read.toFixed(1) : '-'}</td>
+                                </>
+                              )}
+                              {visibleParameters.ph && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.ph_set === 'number' ? row.ph_set.toFixed(2) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-blue)', fontWeight: 600 }}>{typeof row.ph_read === 'number' ? row.ph_read.toFixed(2) : '-'}</td>
+                                </>
+                              )}
+                              {visibleParameters.do && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.do_set || '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{row.do_read || '-'}</td>
+                                </>
+                              )}
+                              {visibleParameters.agit && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{row.agit_set || '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-yellow)', fontWeight: 600 }}>{row.agit_read || '-'}</td>
+                                </>
+                              )}
+                              {visibleParameters.air && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.air_set === 'number' ? row.air_set.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-purple)', fontWeight: 600 }}>{typeof row.air_read === 'number' ? row.air_read.toFixed(1) : '-'}</td>
+                                </>
+                              )}
+                              {visibleParameters.level && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? row.level_set.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? row.level_read.toFixed(1) : '-'}</td>
+                                </>
+                              )}
+                              {visibleParameters.air_out && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.air_out_set === 'number' ? row.air_out_set.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-purple)', fontWeight: 600 }}>{typeof row.air_out_read === 'number' ? row.air_out_read.toFixed(1) : '-'}</td>
+                                </>
+                              )}
+                              {visibleParameters.heat && (
+                                <>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.heat_set === 'number' ? row.heat_set.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-yellow)', fontWeight: 600 }}>{typeof row.heat_read === 'number' ? row.heat_read.toFixed(1) : '-'}</td>
+                                </>
+                              )}
                               <td style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{row.remark || '-'}</td>
                               {userRole === 'admin' && (
                                 <td style={{ textAlign: 'center' }}>
