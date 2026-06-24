@@ -2308,101 +2308,198 @@ function App() {
   if (!userRole) {
     return (
       <div className="login-overlay">
-        <div className="glass-panel login-card" style={{ maxWidth: '450px', width: '95%', padding: '2.5rem', margin: 'auto' }}>
-          <h1 style={{ textAlign: 'center', marginBottom: '0.5rem', background: 'linear-gradient(to right, var(--accent-blue), var(--accent-purple))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700 }}>DBMS</h1>
-          <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '2rem' }}>เครื่องมือบันทึกและจัดเก็บข้อมูล</p>
+        {/* Floating orbs for background decoration */}
+        <div className="login-orb login-orb-1" />
+        <div className="login-orb login-orb-2" />
+        <div className="login-orb login-orb-3" />
 
+        <div className="login-card-wrapper">
+          <div className="login-card-inner">
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Admin Login Block */}
-            <div style={{ padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'rgba(15, 23, 42, 0.3)' }}>
-              <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>🔐 สำหรับแอดมิน (Admin)</h3>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const password = e.target.adminPassword.value;
-                try {
-                  const res = await fetch('/api/settings/verify-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                  });
-                  if (res.ok) {
-                    setUserRole('admin');
-                  } else {
-                    alert('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                  }
-                } catch (err) {
-                  console.error('Error verifying password:', err);
-                  alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
-                }
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <input
-                  type="password"
-                  name="adminPassword"
-                  placeholder="รหัสผ่านแอดมิน"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.5)', color: 'white' }}
-                />
-                <button type="submit" className="btn btn-blue" style={{ width: '100%', margin: 0 }}>เข้าสู่ระบบแอดมิน</button>
-              </form>
+            {/* Logo / Title */}
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              {/* Icon circle */}
+              <div style={{
+                width: '64px', height: '64px', margin: '0 auto 1rem',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(0,240,255,0.15), rgba(124,58,237,0.15))',
+                border: '1px solid rgba(0,240,255,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '2rem',
+                boxShadow: '0 0 30px rgba(0,240,255,0.15)'
+              }}>🧫</div>
+
+              <h1 style={{
+                fontSize: '2.2rem', fontWeight: 800, letterSpacing: '0.06em',
+                background: 'linear-gradient(135deg, #00f0ff 0%, #a78bfa 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                marginBottom: '0.4rem'
+              }}>DBMS</h1>
+              <p style={{ color: '#7bacc4', fontSize: '0.88rem', letterSpacing: '0.03em' }}>
+                เครื่องมือบันทึกและจัดเก็บข้อมูล
+              </p>
             </div>
 
-            {/* Customer Login Block */}
-            <div style={{ padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'rgba(15, 23, 42, 0.3)' }}>
-              <h3 style={{ marginBottom: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem' }}>👥 สำหรับลูกค้า (Customer)</h3>
-              {/* Static customer notice removed per request */}
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const jobCode = e.target.jobCode.value.trim();
-
-                // Fetch fresh DB from server to ensure we have the latest jobs
-                try {
-                  const res = await fetch('/api/db');
-                  if (!res.ok) throw new Error('Failed to fetch DB');
-                  const data = await res.json();
-                  const jobExists = data.jobs.find(j => j.id === jobCode);
-                  if (!jobExists) {
-                    alert('ไม่พบรหัสงานนี้ในระบบ กรุณาตรวจสอบรหัสอีกครั้ง');
-                    return;
-                  }
-
-                  if (jobExists.expiresAt && new Date() > new Date(jobExists.expiresAt)) {
-                    alert('สิทธิ์การเข้าใช้งานเซสชันนี้หมดอายุแล้ว');
-                    return;
-                  }
-
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Admin Login Block */}
+              <div style={{
+                padding: '1.25rem',
+                borderRadius: '14px',
+                background: 'rgba(0, 240, 255, 0.04)',
+                border: '1px solid rgba(0, 240, 255, 0.12)'
+              }}>
+                <h3 style={{
+                  marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700,
+                  color: '#00f0ff', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  letterSpacing: '0.02em'
+                }}>🔐 สำหรับแอดมิน (Admin)</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const password = e.target.adminPassword.value;
                   try {
-                    const ack = localStorage.getItem('bioprocess-customer-notice-ack') === 'true';
-                    if (ack) {
-                      // Apply fresh DB and grant access
-                      applyDBUpdate(data);
-                      setActiveCustomerJobId(jobCode);
-                      setUserRole('customer');
-                      setCurrentAppView('monitoring');
-                      return;
+                    const res = await fetch('/api/settings/verify-password', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ password })
+                    });
+                    if (res.ok) {
+                      setUserRole('admin');
+                    } else {
+                      alert('รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
                     }
                   } catch (err) {
-                    // ignore storage errors
+                    console.error('Error verifying password:', err);
+                    alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
                   }
+                }} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <input
+                    type="password"
+                    name="adminPassword"
+                    placeholder="รหัสผ่านแอดมิน"
+                    style={{
+                      width: '100%', padding: '11px 14px', borderRadius: '10px',
+                      border: '1px solid rgba(0,240,255,0.2)',
+                      background: 'rgba(0, 20, 40, 0.6)',
+                      color: 'white', fontSize: '0.9rem',
+                      outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={e => {
+                      e.target.style.borderColor = 'rgba(0,240,255,0.5)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(0,240,255,0.1)';
+                    }}
+                    onBlur={e => {
+                      e.target.style.borderColor = 'rgba(0,240,255,0.2)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  <button type="submit" style={{
+                    width: '100%', padding: '11px', borderRadius: '10px', border: 'none',
+                    background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                    color: 'white', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                    transition: 'transform 0.15s, box-shadow 0.15s',
+                    boxShadow: '0 4px 15px rgba(14,165,233,0.35)'
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(14,165,233,0.45)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(14,165,233,0.35)'; }}
+                  >เข้าสู่ระบบแอดมิน</button>
+                </form>
+              </div>
 
-                  // show confirmation notice modal before granting access
-                  setPendingJobCode(jobCode);
-                  setShowCustomerNotice(true);
-                } catch (err) {
-                  console.error(err);
-                  alert('เกิดข้อผิดพลาดขณะตรวจสอบรหัสงาน กรุณาลองใหม่');
-                }
-              }} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <input
-                  type="text"
-                  name="jobCode"
-                  placeholder="ป้อนรหัสงานของคุณ (เช่น job-...)"
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.5)', color: 'white' }}
-                />
-                <button type="submit" className="btn btn-blue" style={{ width: '100%', margin: 0 }}>เข้าดูข้อมูลงาน</button>
-              </form>
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+                <span style={{ color: '#4a6a7a', fontSize: '0.78rem', letterSpacing: '0.05em' }}>หรือ</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              </div>
+
+              {/* Customer Login Block */}
+              <div style={{
+                padding: '1.25rem',
+                borderRadius: '14px',
+                background: 'rgba(124, 58, 237, 0.04)',
+                border: '1px solid rgba(124, 58, 237, 0.15)'
+              }}>
+                <h3 style={{
+                  marginBottom: '1rem', fontSize: '0.95rem', fontWeight: 700,
+                  color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  letterSpacing: '0.02em'
+                }}>👥 สำหรับลูกค้า (Customer)</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const jobCode = e.target.jobCode.value.trim();
+                  try {
+                    const res = await fetch('/api/db');
+                    if (!res.ok) throw new Error('Failed to fetch DB');
+                    const data = await res.json();
+                    const jobExists = data.jobs.find(j => j.id === jobCode);
+                    if (!jobExists) {
+                      alert('ไม่พบรหัสงานนี้ในระบบ กรุณาตรวจสอบรหัสอีกครั้ง');
+                      return;
+                    }
+                    if (jobExists.expiresAt && new Date() > new Date(jobExists.expiresAt)) {
+                      alert('สิทธิ์การเข้าใช้งานเซสชันนี้หมดอายุแล้ว');
+                      return;
+                    }
+                    try {
+                      const ack = localStorage.getItem('bioprocess-customer-notice-ack') === 'true';
+                      if (ack) {
+                        applyDBUpdate(data);
+                        setActiveCustomerJobId(jobCode);
+                        setUserRole('customer');
+                        setCurrentAppView('monitoring');
+                        return;
+                      }
+                    } catch (err) { }
+                    setPendingJobCode(jobCode);
+                    setShowCustomerNotice(true);
+                  } catch (err) {
+                    console.error(err);
+                    alert('เกิดข้อผิดพลาดขณะตรวจสอบรหัสงาน กรุณาลองใหม่');
+                  }
+                }} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <input
+                    type="text"
+                    name="jobCode"
+                    placeholder="ป้อนรหัสงานของคุณ (เช่น job-...)"
+                    style={{
+                      width: '100%', padding: '11px 14px', borderRadius: '10px',
+                      border: '1px solid rgba(124,58,237,0.25)',
+                      background: 'rgba(10, 5, 30, 0.6)',
+                      color: 'white', fontSize: '0.9rem',
+                      outline: 'none', transition: 'border-color 0.2s, box-shadow 0.2s',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={e => {
+                      e.target.style.borderColor = 'rgba(167,139,250,0.6)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.12)';
+                    }}
+                    onBlur={e => {
+                      e.target.style.borderColor = 'rgba(124,58,237,0.25)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  <button type="submit" style={{
+                    width: '100%', padding: '11px', borderRadius: '10px', border: 'none',
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    color: 'white', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                    transition: 'transform 0.15s, box-shadow 0.15s',
+                    boxShadow: '0 4px 15px rgba(124,58,237,0.35)'
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124,58,237,0.45)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(124,58,237,0.35)'; }}
+                  >เข้าดูข้อมูลงาน</button>
+                </form>
+              </div>
             </div>
+
+            {/* Footer */}
+            <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: '#3a5a6a', letterSpacing: '0.04em' }}>
+              Bioprocess Data Logging System © {new Date().getFullYear()}
+            </p>
           </div>
         </div>
+
         {showCustomerNotice && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
             <div style={{ width: 520, maxWidth: '95%', background: 'var(--panel-bg)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '1.25rem' }}>
@@ -2445,6 +2542,7 @@ function App() {
           </div>
         )}
       </div>
+
     );
   }
 

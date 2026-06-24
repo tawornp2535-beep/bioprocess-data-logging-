@@ -496,11 +496,144 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  background: #040d1a;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
+  overflow: hidden;
+}
+
+/* Animated orb layers */
+.login-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(0, 200, 255, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 85%, rgba(120, 40, 240, 0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 55% 45%, rgba(0, 90, 180, 0.12) 0%, transparent 55%);
+  animation: loginBgPulse 10s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* Grid pattern overlay */
+.login-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+@keyframes loginBgPulse {
+  0% {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(0, 200, 255, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 85%, rgba(120, 40, 240, 0.20) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 55% 45%, rgba(0, 90, 180, 0.12) 0%, transparent 55%);
+  }
+  50% {
+    background:
+      radial-gradient(ellipse 70% 55% at 30% 20%, rgba(0, 240, 255, 0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 65% 55% at 70% 75%, rgba(139, 40, 255, 0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 45% at 45% 55%, rgba(0, 120, 200, 0.14) 0%, transparent 55%);
+  }
+  100% {
+    background:
+      radial-gradient(ellipse 75% 65% at 15% 5%, rgba(0, 180, 255, 0.16) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 50% at 85% 90%, rgba(100, 20, 220, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 60% 40%, rgba(10, 100, 200, 0.10) 0%, transparent 55%);
+  }
+}
+
+/* Floating orb decorations */
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.login-orb-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #00c8ff, transparent 70%);
+  top: -150px;
+  left: -100px;
+  animation: orbFloat1 14s ease-in-out infinite;
+}
+
+.login-orb-2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #7c3aed, transparent 70%);
+  bottom: -120px;
+  right: -80px;
+  animation: orbFloat2 18s ease-in-out infinite;
+}
+
+.login-orb-3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #0ea5e9, transparent 70%);
+  top: 50%;
+  left: 55%;
+  animation: orbFloat3 20s ease-in-out infinite;
+}
+
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(80px, 60px) scale(1.1); }
+  66% { transform: translate(-40px, 100px) scale(0.9); }
+}
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(-70px, -80px) scale(1.15); }
+  70% { transform: translate(50px, -30px) scale(0.95); }
+}
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-60px, 50px) scale(1.1); }
+  65% { transform: translate(40px, -60px) scale(0.9); }
+}
+
+/* Login card enhanced */
+.login-card-wrapper {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  padding: 0 1rem;
+}
+
+.login-card-inner {
+  background: rgba(8, 20, 40, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow:
+    0 0 0 1px rgba(0,240,255,0.06) inset,
+    0 40px 80px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(0, 200, 255, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top shimmer line on card */
+.login-card-inner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.6), transparent);
+  border-radius: 50%;
 }
 
 /* Mobile top bar */
