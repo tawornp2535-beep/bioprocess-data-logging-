@@ -1076,7 +1076,7 @@ ${dataSummary}
 3. **การตรวจพบสิ่งผิดปกติ (Anomaly Detection)**: ระบุจุดเบี่ยงเบนหรือความผิดปกติใดๆ (เช่น สัญญาณพารามิเตอร์แกว่ง, ค่าตกลงรวดเร็ว, การเติมสารชดเชยล่าช้า) หรือยืนยันว่ารันปกติดี
 4. **ข้อเสนอแนะในการควบคุมกระบวนการ (Optimization Recommendations)**: ข้อแนะนำที่เป็นรูปธรรมสำหรับการปรับจูนค่าพารามิเตอร์ถัดไปเพื่อเพิ่มความเสถียรและ Yield`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1177,7 +1177,7 @@ ${dataSummary}
       parts: [{ text: lastPromptText }]
     });
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents })
