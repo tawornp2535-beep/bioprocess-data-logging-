@@ -933,7 +933,9 @@ function App() {
         setAiChatMessages(prev => [...prev, { role: 'model', content: data.response }]);
         setIsAiChatMock(data.isMock);
       } else {
-        setAiChatMessages(prev => [...prev, { role: 'model', content: 'ขออภัยครับ ไม่สามารถสร้างคำตอบได้ในขณะนี้เนื่องจากปัญหาทางระบบ' }]);
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.error ? ` (${errData.error})` : '';
+        setAiChatMessages(prev => [...prev, { role: 'model', content: `ขออภัยครับ ไม่สามารถสร้างคำตอบได้ในขณะนี้เนื่องจากปัญหาทางระบบ${errMsg}` }]);
       }
     } catch (e) {
       console.error(e);
@@ -2897,8 +2899,7 @@ function App() {
                                     ))}
                                   </select>
                                   <button
-                                    className="btn btn-primary btn-small"
-                                    style={{ margin: 0 }}
+                                    className="btn-outline-cyan"
                                     onClick={() => {
                                       const targetJob = custJobs.find(j => j.id === selectedJobId) || custJobs[0];
                                       setShareModalJobId(targetJob.id);
@@ -3158,8 +3159,7 @@ function App() {
                               <td>
                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
                                   <button
-                                    className="replay-close-btn"
-                                    style={{ background: 'rgba(0, 240, 255, 0.1)', borderColor: 'rgba(0, 240, 255, 0.2)', color: '#00f0ff', padding: '6px 12px' }}
+                                    className="btn-outline-yellow"
                                     onClick={() => {
                                       setCurrentMachineId(job.machineId);
                                       setCurrentJobId(job.id);
@@ -3171,19 +3171,17 @@ function App() {
                                     เปิดบอร์ดข้อมูล
                                   </button>
                                   <button
-                                    className="export-btn"
+                                    className="btn-outline-green"
                                     onClick={() => exportToExcel(job)}
                                     disabled={!job.data || job.data.length === 0}
-                                    style={{ margin: 0, padding: '6px 12px', fontSize: '0.85rem' }}
                                     title="ดาวน์โหลด Excel สำหรับรอบนี้"
                                   >
                                     <Download size={14} style={{ marginRight: '4px' }} /> Excel
                                   </button>
                                   <button
-                                    className="export-btn"
+                                    className="btn-outline-blue"
                                     onClick={() => exportToCSV(job)}
                                     disabled={!job.data || job.data.length === 0}
-                                    style={{ margin: 0, padding: '6px 12px', fontSize: '0.85rem' }}
                                     title="ดาวน์โหลด CSV สำหรับรอบนี้"
                                   >
                                     <Download size={14} style={{ marginRight: '4px' }} /> CSV
@@ -4491,7 +4489,8 @@ function App() {
                                   setAiReport(data.report);
                                   setIsAiReportMock(data.isMock);
                                 } else {
-                                  alert('ไม่สามารถวิเคราะห์ข้อมูลได้');
+                                  const errData = await res.json().catch(() => ({}));
+                                  alert(`ไม่สามารถวิเคราะห์ข้อมูลได้: ${errData.error || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุจากเซิร์ฟเวอร์'}`);
                                 }
                               } catch (e) {
                                 console.error(e);
