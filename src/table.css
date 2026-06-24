@@ -74,6 +74,7 @@
   border-bottom: 1px solid var(--table-border);
   border-right: 1px solid var(--table-border);
   font-size: 0.875rem;
+  white-space: nowrap; /* Prevent text wrapping and overlapping */
 }
 
 .data-table th:last-child, 
@@ -128,6 +129,12 @@
   margin-bottom: 1rem;
 }
 
+/* Allow specific cells (like remarks) to wrap normally */
+.data-table td.remarks-cell {
+  white-space: normal !important;
+  min-width: 180px;
+}
+
 /* ==========================================================================
    Outlined Table Action Buttons (Matches user's template screenshot)
    ========================================================================== */
@@ -150,6 +157,7 @@
   gap: 4px;
   font-family: inherit;
   line-height: 1.25;
+  white-space: nowrap; /* Prevent button text from wrapping */
 }
 
 .btn-outline-yellow:disabled,
