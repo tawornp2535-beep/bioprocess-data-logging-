@@ -2163,3 +2163,19 @@ body {
 .ai-chat-panel div::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* Light mode overrides for modals & general inputs */
+[data-theme="light"] .modal-input {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary) !important;
+  border-color: rgba(15, 23, 42, 0.15);
+}
+
+[data-theme="light"] .modal-info-box {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="light"] .modal-preview-box {
+  background: rgba(15, 23, 42, 0.03);
+  color: var(--text-secondary);
+}

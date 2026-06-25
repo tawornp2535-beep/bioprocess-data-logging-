@@ -17,6 +17,52 @@ import './form.css';
 import './tabs.css';
 import './table.css';
 
+const compressImage = (file, maxWidth = 400, maxHeight = 400, quality = 0.75) => {
+  return new Promise((resolve) => {
+    if (!file) {
+      resolve(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        resolve(canvas.toDataURL(type, quality));
+      };
+      img.onerror = () => {
+        resolve(event.target.result); // Fallback to original base64 on error
+      };
+    };
+    reader.onerror = () => {
+      resolve(null);
+    };
+  });
+};
+
 const getElapsedHours = (job, dataPointTimestamp) => {
   if (!job || !dataPointTimestamp) return 0;
 
@@ -3135,20 +3181,20 @@ function App() {
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        if (file.size > 5 * 1024 * 1024) {
-                          alert('ขนาดไฟล์ต้องไม่เกิน 5 MB');
-                          return;
-                        }
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          const base64 = ev.target.result;
+                        compressImage(file).then((base64) => {
+                          if (!base64) return;
                           fetch(`/api/machines/${m.id}/image`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ imageData: base64 })
-                          }).then(res => res.ok && res.json()).then(data => data && applyDBUpdate(data));
-                        };
-                        reader.readAsDataURL(file);
+                          })
+                            .then(res => res.ok && res.json())
+                            .then(data => data && applyDBUpdate(data))
+                            .catch(err => {
+                              console.error('Error uploading machine image:', err);
+                              alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+                            });
+                        });
                         // reset input so same file can be re-selected
                         e.target.value = '';
                       }}
@@ -3765,7 +3811,7 @@ function App() {
                     type="password"
                     name="currentPassword"
                     placeholder="ป้อนรหัสผ่านปัจจุบัน"
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.5)', color: 'white', width: '100%' }}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
                   />
                 </div>
 
@@ -3775,7 +3821,7 @@ function App() {
                     type="password"
                     name="newPassword"
                     placeholder="ป้อนรหัสผ่านใหม่"
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.5)', color: 'white', width: '100%' }}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
                   />
                 </div>
 
@@ -3785,7 +3831,7 @@ function App() {
                     type="password"
                     name="confirmPassword"
                     placeholder="ป้อนยืนยันรหัสผ่านใหม่"
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.5)', color: 'white', width: '100%' }}
+                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
                   />
                 </div>
 
@@ -4867,7 +4913,7 @@ function App() {
                         onChange={(e) => setAiNewMessage(e.target.value)}
                         placeholder="พิมพ์ถามผู้ช่วย AI ของคุณ..."
                         disabled={isAiChatLoading}
-                        style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.4)', color: 'white', fontSize: '0.9rem' }}
+                        style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
                       />
                       <button type="submit" className="btn btn-blue" disabled={isAiChatLoading || !aiNewMessage.trim()} style={{ margin: 0 }}>
                         ส่ง
@@ -4973,7 +5019,7 @@ function App() {
                                   type="date"
                                   value={editingRowData.date}
                                   onChange={(e) => handleEditChange('date', e.target.value)}
-                                  style={{ padding: '6px 4px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '115px' }}
+                                  style={{ padding: '6px 4px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '115px' }}
                                   required
                                 />
                               </td>
@@ -4982,7 +5028,7 @@ function App() {
                                   type="time"
                                   value={editingRowData.time}
                                   onChange={(e) => handleEditChange('time', e.target.value)}
-                                  style={{ padding: '6px 4px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '85px' }}
+                                  style={{ padding: '6px 4px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '85px' }}
                                   required
                                 />
                               </td>
@@ -4997,7 +5043,7 @@ function App() {
                                       step="0.01"
                                       value={editingRowData.temp_set}
                                       onChange={(e) => handleEditChange('temp_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5006,7 +5052,7 @@ function App() {
                                       step="0.01"
                                       value={editingRowData.temp_read}
                                       onChange={(e) => handleEditChange('temp_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-red)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-red)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5019,7 +5065,7 @@ function App() {
                                       step="0.01"
                                       value={editingRowData.ph_set}
                                       onChange={(e) => handleEditChange('ph_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5028,7 +5074,7 @@ function App() {
                                       step="0.01"
                                       value={editingRowData.ph_read}
                                       onChange={(e) => handleEditChange('ph_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-blue)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5041,7 +5087,7 @@ function App() {
                                       step="1"
                                       value={editingRowData.do_set}
                                       onChange={(e) => handleEditChange('do_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '40px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '40px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5050,7 +5096,7 @@ function App() {
                                       step="1"
                                       value={editingRowData.do_read}
                                       onChange={(e) => handleEditChange('do_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '40px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '40px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5063,7 +5109,7 @@ function App() {
                                       step="1"
                                       value={editingRowData.agit_set}
                                       onChange={(e) => handleEditChange('agit_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '50px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5072,7 +5118,7 @@ function App() {
                                       step="1"
                                       value={editingRowData.agit_read}
                                       onChange={(e) => handleEditChange('agit_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '50px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5085,7 +5131,7 @@ function App() {
                                       step="0.1"
                                       value={editingRowData.air_set}
                                       onChange={(e) => handleEditChange('air_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5094,7 +5140,7 @@ function App() {
                                       step="0.1"
                                       value={editingRowData.air_read}
                                       onChange={(e) => handleEditChange('air_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5107,7 +5153,7 @@ function App() {
                                       step="0.1"
                                       value={editingRowData.level_set}
                                       onChange={(e) => handleEditChange('level_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5116,7 +5162,7 @@ function App() {
                                       step="0.1"
                                       value={editingRowData.level_read}
                                       onChange={(e) => handleEditChange('level_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5129,7 +5175,7 @@ function App() {
                                       step="0.1"
                                       value={editingRowData.air_out_set}
                                       onChange={(e) => handleEditChange('air_out_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5138,7 +5184,7 @@ function App() {
                                       step="0.1"
                                       value={editingRowData.air_out_read}
                                       onChange={(e) => handleEditChange('air_out_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-purple)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5151,7 +5197,7 @@ function App() {
                                       step="1"
                                       value={editingRowData.heat_set}
                                       onChange={(e) => handleEditChange('heat_set', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
                                     />
                                   </td>
                                   <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -5160,7 +5206,7 @@ function App() {
                                       step="1"
                                       value={editingRowData.heat_read}
                                       onChange={(e) => handleEditChange('heat_read', parseFloat(e.target.value) || 0)}
-                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
+                                      style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-yellow)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
                                 </>
@@ -5170,7 +5216,7 @@ function App() {
                                   type="text"
                                   value={editingRowData.remark}
                                   onChange={(e) => handleEditChange('remark', e.target.value)}
-                                  style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', fontSize: '0.85rem', width: '100%', minWidth: '100px' }}
+                                  style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '100%', minWidth: '100px' }}
                                 />
                               </td>
                               {userRole === 'admin' && (
@@ -5693,8 +5739,8 @@ function App() {
 
         const inputStyle = {
           padding: '10px 12px', borderRadius: '8px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          background: 'rgba(255,255,255,0.03)', color: 'white',
+          border: '1px solid var(--border-color)',
+          background: 'var(--bg-color)', color: 'var(--text-primary)',
           fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box'
         };
 
@@ -5708,7 +5754,7 @@ function App() {
               {/* Modal Header */}
               <div style={{
                 padding: '1.25rem 1.75rem',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                borderBottom: '1px solid var(--border-color)',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 background: 'linear-gradient(135deg, rgba(234,179,8,0.12), rgba(234,179,8,0.04))',
                 flexShrink: 0
@@ -5716,7 +5762,7 @@ function App() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Star size={22} color="var(--accent-yellow)" />
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#fde68a' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--accent-yellow)' }}>
                       แบบประเมินความพึงพอใจ
                     </h3>
                     <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -5787,10 +5833,10 @@ function App() {
                             alignItems: 'center',
                             padding: '8px 10px',
                             borderRadius: '8px',
-                            background: qi % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                            background: qi % 2 === 0 ? (theme === 'light' ? 'rgba(15,23,42,0.02)' : 'rgba(255,255,255,0.02)') : 'transparent',
                             transition: 'background 0.15s'
                           }}>
-                            <span style={{ fontSize: '0.82rem', color: '#d1d5db', lineHeight: 1.4, paddingRight: '8px' }}>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)', lineHeight: 1.4, paddingRight: '8px' }}>
                               {SURVEY_QUESTIONS.indexOf(q) + 1}. {q.text}
                             </span>
                             {[5, 4, 3, 2, 1].map(score => (
@@ -5806,10 +5852,10 @@ function App() {
                                 <span style={{
                                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                   width: '28px', height: '28px', borderRadius: '50%',
-                                  border: `2px solid ${feedbackScores[q.id] === score ? scoreColors[score] : 'rgba(255,255,255,0.15)'}`,
+                                  border: `2px solid ${feedbackScores[q.id] === score ? scoreColors[score] : (theme === 'light' ? 'rgba(15,23,42,0.15)' : 'rgba(255,255,255,0.15)')}`,
                                   background: feedbackScores[q.id] === score ? scoreColors[score] + '33' : 'transparent',
                                   fontSize: '0.75rem', fontWeight: 700,
-                                  color: feedbackScores[q.id] === score ? scoreColors[score] : 'rgba(255,255,255,0.35)',
+                                  color: feedbackScores[q.id] === score ? scoreColors[score] : (theme === 'light' ? 'rgba(15,23,42,0.35)' : 'rgba(255,255,255,0.35)'),
                                   transition: 'all 0.15s',
                                   userSelect: 'none'
                                 }}>
@@ -5832,9 +5878,9 @@ function App() {
                           <label key={ch} style={{
                             display: 'flex', alignItems: 'center', gap: '6px',
                             padding: '6px 12px', borderRadius: '20px', cursor: 'pointer',
-                            border: `1px solid ${feedbackChannels.includes(ch) ? 'rgba(59,130,246,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                            background: feedbackChannels.includes(ch) ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.03)',
-                            fontSize: '0.8rem', color: feedbackChannels.includes(ch) ? '#93c5fd' : 'var(--text-secondary)',
+                            border: `1px solid ${feedbackChannels.includes(ch) ? 'rgba(59,130,246,0.6)' : (theme === 'light' ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.12)')}`,
+                            background: feedbackChannels.includes(ch) ? 'rgba(59,130,246,0.15)' : (theme === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.03)'),
+                            fontSize: '0.8rem', color: feedbackChannels.includes(ch) ? 'var(--accent-blue)' : 'var(--text-secondary)',
                             transition: 'all 0.15s', userSelect: 'none'
                           }}>
                             <input
@@ -5859,9 +5905,9 @@ function App() {
                           <label key={t} style={{
                             display: 'flex', alignItems: 'center', gap: '6px',
                             padding: '6px 12px', borderRadius: '20px', cursor: 'pointer',
-                            border: `1px solid ${feedbackTools.includes(t) ? 'rgba(34,197,94,0.6)' : 'rgba(255,255,255,0.12)'}`,
-                            background: feedbackTools.includes(t) ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)',
-                            fontSize: '0.8rem', color: feedbackTools.includes(t) ? '#86efac' : 'var(--text-secondary)',
+                            border: `1px solid ${feedbackTools.includes(t) ? 'rgba(34,197,94,0.6)' : (theme === 'light' ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.12)')}`,
+                            background: feedbackTools.includes(t) ? 'rgba(34,197,94,0.12)' : (theme === 'light' ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.03)'),
+                            fontSize: '0.8rem', color: feedbackTools.includes(t) ? 'var(--accent-green)' : 'var(--text-secondary)',
                             transition: 'all 0.15s', userSelect: 'none'
                           }}>
                             <input
@@ -5901,7 +5947,7 @@ function App() {
                           style={{
                             width: '100%', height: '36px',
                             background: 'transparent',
-                            border: '1px solid rgba(255,255,255,0.12)',
+                            border: '1px solid var(--border-color)',
                             borderRadius: '8px',
                             color: 'var(--text-secondary)',
                             fontSize: '0.8rem', cursor: 'pointer',

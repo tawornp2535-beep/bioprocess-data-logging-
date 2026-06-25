@@ -187,3 +187,14 @@
   border-radius: 6px;
 }
 
+/* Light mode overrides for form inputs */
+[data-theme="light"] .form-inputs-row input {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.15);
+}
+
+[data-theme="light"] .form-inputs-row input:disabled {
+  background-color: rgba(15, 23, 42, 0.05);
+  color: var(--text-secondary);
+}
+
