@@ -693,12 +693,12 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
                 <span className="gauge-value">{airDisplayLpm.toFixed(2)} L/min / {calculatedVvm} vvm</span>
               </div>
               <div className="gauge-track-bar">
-                <div className="gauge-filled-bar green-bar" style={{ width: `${Math.min(100, Math.max(0, (air_read / 1000) * 100))}%` }}></div>
+                <div className="gauge-filled-bar green-bar" style={{ width: `${Math.min(100, Math.max(0, (airDisplayLpm / 1000) * 100))}%` }}></div>
               </div>
               <div className="gauge-limits">
                 <span>0</span>
-                <span>500</span>
-                <span>1000</span>
+                <span>500 L/min</span>
+                <span>1000 L/min</span>
               </div>
             </div>
 
@@ -710,12 +710,12 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
                 <span className="gauge-value">{air_out_read.toFixed(1)} PMa</span>
               </div>
               <div className="gauge-track-bar">
-                <div className="gauge-filled-bar blue-bar" style={{ width: `${Math.min(100, Math.max(0, (air_out_read / 1000) * 100))}%` }}></div>
+                <div className="gauge-filled-bar blue-bar" style={{ width: `${Math.min(100, Math.max(0, (airUnit === 'mlmin' ? (air_out_read / 1000) : air_out_read) / 1000 * 100))}%` }}></div>
               </div>
               <div className="gauge-limits">
                 <span>0</span>
-                <span>500</span>
-                <span>1000</span>
+                <span>500 L/min</span>
+                <span>1000 L/min</span>
               </div>
             </div>
 
