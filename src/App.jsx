@@ -889,6 +889,7 @@ function App() {
   });
   // Message shown on login screen when session expires
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(null);
+  const [hasFetchedDB, setHasFetchedDB] = useState(false);
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -1224,6 +1225,7 @@ function App() {
         if (data.activeUsers) {
           setActiveUsers(data.activeUsers);
         }
+        setHasFetchedDB(true);
 
         if (shouldAutoSelect) {
           const savedMachineId = localStorage.getItem('bioprocess-current-machine');
@@ -1261,12 +1263,24 @@ function App() {
         const targetJob = data.jobs.find(j => j.id === jobCode);
         if (!targetJob) {
           alert('ไม่พบรหัสงานนี้ในระบบ หรือ ลิงก์ไม่ถูกต้อง');
+          setUserRole(null);
+          setActiveCustomerJobId(null);
           return;
         }
 
         // Expiry check
         if (targetJob.expiresAt && new Date() > new Date(targetJob.expiresAt)) {
           alert('สิทธิ์การเข้าใช้งานเซสชันนี้หมดอายุแล้ว');
+          setUserRole(null);
+          setActiveCustomerJobId(null);
+          return;
+        }
+
+        // Status check
+        if (targetJob.status === 'finished') {
+          alert('รอบรันนี้ได้เสร็จสิ้นหรือหยุดการใช้งานแล้ว');
+          setUserRole(null);
+          setActiveCustomerJobId(null);
           return;
         }
 
@@ -1312,19 +1326,31 @@ function App() {
 
   // Active Customer Session Expiry Check
   useEffect(() => {
-    if (userRole === 'customer' && activeCustomerJobId && jobs.length > 0) {
+    if (hasFetchedDB && userRole === 'customer' && activeCustomerJobId) {
       const activeJob = jobs.find(j => j.id === activeCustomerJobId);
-      if (activeJob && activeJob.expiresAt && new Date() > new Date(activeJob.expiresAt)) {
-        // Redirect to login with expiry message (no alert popup)
-        setSessionExpiredMessage(
-          `สิทธิ์การเข้าใช้งานสำหรับรอบรัน "${activeJob.name || activeCustomerJobId}" หมดอายุแล้ว กรุณาติดต่อเจ้าหน้าที่เพื่อขอลิงก์ใหม่`
-        );
+      
+      let shouldLogout = false;
+      let reason = '';
+      
+      if (!activeJob) {
+        shouldLogout = true;
+        reason = 'ไม่พบข้อมูลของรอบรันนี้ในระบบ หรือข้อมูลอาจถูกลบไปแล้ว';
+      } else if (activeJob.expiresAt && new Date() > new Date(activeJob.expiresAt)) {
+        shouldLogout = true;
+        reason = `สิทธิ์การเข้าใช้งานสำหรับรอบรัน "${activeJob.name || activeCustomerJobId}" หมดอายุแล้ว`;
+      } else if (activeJob.status === 'finished') {
+        shouldLogout = true;
+        reason = `รอบรัน "${activeJob.name || activeCustomerJobId}" ได้เสร็จสิ้นหรือถูกระงับการใช้งานแล้ว`;
+      }
+      
+      if (shouldLogout) {
+        setSessionExpiredMessage(reason + ' กรุณาติดต่อเจ้าหน้าที่เพื่อขอลิงก์ใหม่');
         setUserRole(null);
         setActiveCustomerJobId(null);
         setCurrentAppView('monitoring');
       }
     }
-  }, [jobs, userRole, activeCustomerJobId]);
+  }, [hasFetchedDB, jobs, userRole, activeCustomerJobId]);
 
   // Save current active selections locally in browser
   useEffect(() => {
@@ -2580,6 +2606,10 @@ function App() {
                     }
                     if (jobExists.expiresAt && new Date() > new Date(jobExists.expiresAt)) {
                       alert('สิทธิ์การเข้าใช้งานเซสชันนี้หมดอายุแล้ว');
+                      return;
+                    }
+                    if (jobExists.status === 'finished') {
+                      alert('รอบรันนี้ได้เสร็จสิ้นหรือหยุดการใช้งานแล้ว');
                       return;
                     }
                     try {
