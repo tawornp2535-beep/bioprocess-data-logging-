@@ -512,10 +512,21 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
 
             {/* Pipes and Valvings */}
             {/* Gas Inlet pipe (Top-Right) */}
-            <path d="M 180 115 L 180 65 L 230 65" fill="none" stroke={air_read > 0 ? "#10b981" : "#9ca3af"} strokeWidth="6" strokeLinecap="round" />
+            <path d="M 230 65 L 180 65 L 180 115" fill="none" stroke={air_read > 0 ? "#065f46" : "#9ca3af"} strokeWidth="6" strokeLinecap="round" />
+            {/* Gas Inlet Flow Line */}
+            {air_read > 0 && (
+              <path 
+                d="M 230 65 L 180 65 L 180 115" 
+                fill="none" 
+                stroke="#10b981" 
+                strokeWidth="3.5" 
+                strokeLinecap="round" 
+                className="inlet-air-flow-line" 
+              />
+            )}
             {/* Gas Inlet Flow Arrow */}
             {air_read > 0 && (
-              <path d="M 225 65 L 215 60 L 215 70 Z" fill="#ffffff" className="flow-arrow-animation-right" />
+              <path d="M 185 65 L 195 60 L 195 70 Z" fill="#ffffff" className="flow-arrow-animation-left" />
             )}
 
             {/* Air Outlet pipe (Top-Left) */}
