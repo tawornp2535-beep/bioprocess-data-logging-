@@ -2014,11 +2014,31 @@ function App() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? (parseFloat(value) || 0) : value
+      [name]: value
     }));
+  };
+
+  const handleInputFocus = (e) => {
+    const { name, value } = e.target;
+    if (value === '0' || parseFloat(value) === 0) {
+      setFormData(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleInputBlur = (e) => {
+    const { name, value } = e.target;
+    if (String(value).trim() === '') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: 0
+      }));
+    }
   };
 
   const handleManualSubmit = (e) => {
@@ -4135,11 +4155,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="0.01" name="temp_set" value={formData.temp_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.01" name="temp_set" value={formData.temp_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="0.01" name="temp_read" value={formData.temp_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.01" name="temp_read" value={formData.temp_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4148,11 +4168,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="0.01" name="ph_set" value={formData.ph_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.01" name="ph_set" value={formData.ph_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="0.01" name="ph_read" value={formData.ph_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.01" name="ph_read" value={formData.ph_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4161,11 +4181,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="1" name="do_set" value={formData.do_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="1" name="do_set" value={formData.do_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="1" name="do_read" value={formData.do_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="1" name="do_read" value={formData.do_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4174,11 +4194,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="1" name="agit_set" value={formData.agit_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="1" name="agit_set" value={formData.agit_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="1" name="agit_read" value={formData.agit_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="1" name="agit_read" value={formData.agit_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4187,11 +4207,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="0.1" name="air_set" value={formData.air_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.1" name="air_set" value={formData.air_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="0.1" name="air_read" value={formData.air_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.1" name="air_read" value={formData.air_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4200,11 +4220,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="0.1" name="level_set" value={formData.level_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.1" name="level_set" value={formData.level_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="0.1" name="level_read" value={formData.level_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.1" name="level_read" value={formData.level_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4213,11 +4233,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="0.1" name="air_out_set" value={formData.air_out_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.1" name="air_out_set" value={formData.air_out_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="0.1" name="air_out_read" value={formData.air_out_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="0.1" name="air_out_read" value={formData.air_out_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4226,11 +4246,11 @@ function App() {
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="1" name="heat_set" value={formData.heat_set} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="1" name="heat_set" value={formData.heat_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="1" name="heat_read" value={formData.heat_read} onChange={handleInputChange} disabled={currentJob?.status === 'finished'} />
+                          <input type="number" step="1" name="heat_read" value={formData.heat_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
                         </div>
                       </div>
                     </div>
@@ -4368,11 +4388,17 @@ function App() {
               <div className="header-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   className={`theme-toggle-btn`}
-                  onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-                  title="Toggle theme"
+                  onClick={() => setTheme(prev => {
+                    if (prev === 'dark') return 'light';
+                    if (prev === 'light') return 'hmi';
+                    return 'dark';
+                  })}
+                  title={`ธีม: ${theme === 'dark' ? 'Dark Mode' : theme === 'light' ? 'Light Mode' : 'Industrial HMI Mode'}`}
                   style={{ margin: 0 }}
                 >
-                  {theme === 'dark' ? '🌙' : '☀️'}
+                  {theme === 'dark' && '🌙'}
+                  {theme === 'light' && '☀️'}
+                  {theme === 'hmi' && '⚙️'}
                 </button>
                 {currentJob && userRole === 'admin' && currentJob.status !== 'finished' && (
                   <button

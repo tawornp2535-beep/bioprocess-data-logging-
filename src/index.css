@@ -37,6 +37,74 @@
   --accent-purple: #7c3aed;
 }
 
+/* HMI theme variables applied when document has data-theme="hmi" */
+[data-theme="hmi"] {
+  --bg-color: #050b14;
+  --panel-bg: rgba(10, 18, 30, 0.85);
+  --border-color: rgba(0, 240, 255, 0.25);
+  --text-primary: #e2f1f5;
+  --text-secondary: #6e949e;
+
+  --accent-blue: #00f0ff;      /* Neon Cyan */
+  --accent-green: #00ff87;     /* Neon Emerald Green */
+  --accent-red: #ff3e3e;       /* Neon Red */
+  --accent-yellow: #ffb800;    /* Neon Amber/Yellow */
+  --accent-purple: #d800ff;    /* Neon Purple */
+
+  /* Table variables for HMI */
+  --table-even-bg: rgba(13, 22, 38, 0.4);
+  --table-odd-bg: rgba(8, 14, 24, 0.2);
+  --table-header-bg: rgba(8, 14, 24, 0.85);
+  --table-border: rgba(0, 240, 255, 0.15);
+  --table-hover: rgba(0, 240, 255, 0.08);
+}
+
+/* Neon glows for HMI theme */
+[data-theme="hmi"] .sensor-lcd-display,
+[data-theme="hmi"] .display-screen {
+  background: #020408 !important;
+  border: 1px solid var(--accent-blue) !important;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 240, 255, 0.25) !important;
+}
+
+[data-theme="hmi"] .lcd-value,
+[data-theme="hmi"] .screen-val {
+  text-shadow: 0 0 8px currentColor !important;
+}
+
+[data-theme="hmi"] .red-lcd {
+  border-color: var(--accent-red) !important;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 10px rgba(255, 62, 62, 0.25) !important;
+}
+[data-theme="hmi"] .green-lcd {
+  border-color: var(--accent-green) !important;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 255, 135, 0.25) !important;
+}
+[data-theme="hmi"] .blue-lcd {
+  border-color: var(--accent-blue) !important;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 240, 255, 0.25) !important;
+}
+
+[data-theme="hmi"] .gauge-filled-bar {
+  box-shadow: 0 0 8px currentColor;
+}
+
+[data-theme="hmi"] .glass-panel,
+[data-theme="hmi"] .metric-card {
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(0, 240, 255, 0.1) !important;
+}
+
+[data-theme="hmi"] .nav-tabs {
+  background: rgba(8, 14, 24, 0.8) !important;
+  border-color: rgba(0, 240, 255, 0.15) !important;
+}
+
+[data-theme="hmi"] .nav-tab.active {
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25) !important;
+  color: var(--accent-blue) !important;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
