@@ -2093,6 +2093,73 @@ function App() {
     }
   };
 
+  const handleExportFeedback = () => {
+    if (feedbacks.length === 0) {
+      alert('ไม่มีข้อมูลแบบประเมินความพึงพอใจสำหรับส่งออก');
+      return;
+    }
+
+    const headers = [
+      'วันที่บันทึก',
+      'ชื่องาน',
+      'คะแนนเฉลี่ย (CSAT)',
+      'q1_ขั้นตอนการให้บริการ',
+      'q2_ช่องทางการติดต่อ',
+      'q3_ระยะเวลาให้บริการ',
+      'q4_บุคลิกภาพเจ้าหน้าที่',
+      'q5_คำแนะนำของเจ้าหน้าที่',
+      'q6_ความรู้เจ้าหน้าที่',
+      'q7_สื่อประชาสัมพันธ์',
+      'q8_ช่องทางPR',
+      'q9_สถานที่ให้บริการ',
+      'q10_สิ่งอำนวยความสะดวก',
+      'q11_คุณภาพบริการ',
+      'ช่องทางที่รู้จัก',
+      'เครื่องมือที่ใช้บริการ',
+      'ข้อเสนอแนะเพิ่มเติม'
+    ];
+
+    const rows = feedbacks.map(fb => {
+      const dateStr = fb.createdAt ? new Date(fb.createdAt).toLocaleString('th-TH') : '';
+      const scores = fb.scores || {};
+      const channels = (fb.channels || []).join('; ');
+      const tools = (fb.tools || []).join('; ');
+      const suggestion = fb.suggestion || fb.comment || '';
+      const avgScore = fb.avgScore || fb.rating || 0;
+
+      return [
+        `"${dateStr}"`,
+        `"${fb.jobName || ''}"`,
+        avgScore.toFixed(2),
+        scores.q1 || '',
+        scores.q2 || '',
+        scores.q3 || '',
+        scores.q4 || '',
+        scores.q5 || '',
+        scores.q6 || '',
+        scores.q7 || '',
+        scores.q8 || '',
+        scores.q9 || '',
+        scores.q10 || '',
+        scores.q11 || '',
+        `"${channels.replace(/"/g, '""')}"`,
+        `"${tools.replace(/"/g, '""')}"`,
+        `"${suggestion.replace(/"/g, '""')}"`
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `customer_satisfaction_feedbacks_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleManualSubmit = (e) => {
     e.preventDefault();
     const now = new Date();
@@ -3865,90 +3932,130 @@ function App() {
           /* SYSTEM SETTINGS VIEW */
           <div className="settings-view">
             <header className="dashboard-header">
-              <h2>System Settings</h2>
+              <h2>System Settings (การตั้งค่าระบบ)</h2>
             </header>
 
-            <div className="glass-panel" style={{ padding: '2rem', maxWidth: '500px' }}>
-              <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Settings size={20} color="var(--accent-blue)" /> ตั้งค่ารหัสผ่านผู้ดูแลระบบ (Change Admin Password)
-              </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+              <div className="glass-panel" style={{ padding: '2rem' }}>
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Settings size={20} color="var(--accent-blue)" /> ตั้งค่ารหัสผ่านผู้ดูแลระบบ (Change Admin Password)
+                </h3>
 
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const currentPassword = e.target.currentPassword.value;
-                const newPassword = e.target.newPassword.value;
-                const confirmPassword = e.target.confirmPassword.value;
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const currentPassword = e.target.currentPassword.value;
+                  const newPassword = e.target.newPassword.value;
+                  const confirmPassword = e.target.confirmPassword.value;
 
-                if (!currentPassword || !newPassword || !confirmPassword) {
-                  alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-                  return;
-                }
-
-                if (newPassword !== confirmPassword) {
-                  alert('รหัสผ่านใหม่และยืนยันรหัสผ่านใหม่ไม่ตรงกัน');
-                  return;
-                }
-
-                try {
-                  const res = await fetch('/api/settings/update-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ currentPassword, newPassword })
-                  });
-                  const result = await res.json();
-                  if (res.ok) {
-                    alert('เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว');
-                    e.target.reset();
-                  } else {
-                    alert(`ผิดพลาด: ${result.error}`);
+                  if (!currentPassword || !newPassword || !confirmPassword) {
+                    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                    return;
                   }
-                } catch (err) {
-                  console.error('Error changing password:', err);
-                  alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อเปลี่ยนรหัสผ่านได้');
-                }
-              }} className="data-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>รหัสผ่านปัจจุบัน (Current Password)</label>
-                  <input
-                    type="password"
-                    name="currentPassword"
-                    placeholder="ป้อนรหัสผ่านปัจจุบัน"
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                  />
+                  if (newPassword !== confirmPassword) {
+                    alert('รหัสผ่านใหม่และยืนยันรหัสผ่านใหม่ไม่ตรงกัน');
+                    return;
+                  }
+
+                  try {
+                    const res = await fetch('/api/settings/update-password', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ currentPassword, newPassword })
+                    });
+                    const result = await res.json();
+                    if (res.ok) {
+                      alert('เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว');
+                      e.target.reset();
+                    } else {
+                      alert(`ผิดพลาด: ${result.error}`);
+                    }
+                  } catch (err) {
+                    console.error('Error changing password:', err);
+                    alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อเปลี่ยนรหัสผ่านได้');
+                  }
+                }} className="data-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <label>รหัสผ่านปัจจุบัน (Current Password)</label>
+                    <input
+                      type="password"
+                      name="currentPassword"
+                      placeholder="ป้อนรหัสผ่านปัจจุบัน"
+                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <label>รหัสผ่านใหม่ (New Password)</label>
+                    <input
+                      type="password"
+                      name="newPassword"
+                      placeholder="ป้อนรหัสผ่านใหม่"
+                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <label>ยืนยันรหัสผ่านใหม่ (Confirm New Password)</label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      placeholder="ป้อนยืนยันรหัสผ่านใหม่"
+                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                    />
+                  </div>
+
+                  <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: 0, marginTop: '0.5rem' }}>
+                    บันทึกการตั้งค่า (Update Password)
+                  </button>
+                </form>
+              </div>
+
+              {/* Developer & Version Information Panel */}
+              <div className="glass-panel" style={{ padding: '2rem' }}>
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-green)' }}>
+                  ⚙️ เกี่ยวกับผู้พัฒนา & ระบบ (About System)
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-primary)' }}>
+                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ชื่อระบบ:</span>
+                    <span style={{ fontWeight: 700 }}>DBMS (Bioprocess Data Logging)</span>
+                  </div>
+                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เวอร์ชันปัจจุบัน:</span>
+                    <span style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>v2.4.0 (SCADA Polish)</span>
+                  </div>
+                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ผู้พัฒนาระบบ:</span>
+                    <span style={{ fontWeight: 700 }}>ทีมวิศวกรรมข้อมูลชีวภาพ (Bioprocess Engineering Team)</span>
+                  </div>
+                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เทคโนโลยีหลัก:</span>
+                    <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>React / Vite / Node.js / GCS</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>รายละเอียดติดต่อ / สนับสนุนเทคนิค:</span>
+                    <span style={{ fontSize: '0.85rem' }}>📧 support@bioprocess-logging.local</span>
+                    <span style={{ fontSize: '0.85rem' }}>📞 +66 2 123 4567</span>
+                  </div>
                 </div>
-
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>รหัสผ่านใหม่ (New Password)</label>
-                  <input
-                    type="password"
-                    name="newPassword"
-                    placeholder="ป้อนรหัสผ่านใหม่"
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                  />
-                </div>
-
-                <div className="form-group" style={{ width: '100%' }}>
-                  <label>ยืนยันรหัสผ่านใหม่ (Confirm New Password)</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    placeholder="ป้อนยืนยันรหัสผ่านใหม่"
-                    style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                  />
-                </div>
-
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: 0, marginTop: '0.5rem' }}>
-                  บันทึกการตั้งค่า (Update Password)
-                </button>
-              </form>
+              </div>
             </div>
           </div>
         ) : currentAppView === 'feedbacks' ? (
           /* CUSTOMER FEEDBACKS VIEW FOR ADMIN */
           <div className="feedbacks-view">
-            <header className="dashboard-header">
-              <h2>แบบประเมินความพึงพอใจลูกค้า (Customer Satisfaction Survey)</h2>
+            <header className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0 }}>แบบประเมินความพึงพอใจลูกค้า (Customer Satisfaction Survey)</h2>
+              <button 
+                onClick={handleExportFeedback}
+                className="btn btn-primary"
+                style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                📥 ส่งออกข้อมูล (Export CSV)
+              </button>
             </header>
 
             {(() => {
