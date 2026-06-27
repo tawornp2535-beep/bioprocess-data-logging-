@@ -330,20 +330,23 @@ const getDB = async () => {
 const SETTINGS_COL = 'settings';
 
 const getSettings = async () => {
+  let settings = {};
   if (isCloud) {
     try {
       const doc = await db.collection(SETTINGS_COL).doc('system').get();
       if (doc.exists) {
-        return doc.data();
+        settings = doc.data();
       }
     } catch (e) {
       console.error('Error reading settings from Firestore:', e);
     }
+  } else {
+    const localDB = readLocalDB();
+    settings = localDB.settings || {};
   }
-  
-  const localDB = readLocalDB();
-  if (!localDB.settings) {
-    localDB.settings = { adminPassword: 'admin123' };
+
+  if (!settings.adminPassword) {
+    settings.adminPassword = 'admin123';
   }
   
   // Ensure default developer info and VVM config are present
@@ -362,23 +365,27 @@ const getSettings = async () => {
   
   let needsWrite = false;
   for (const [k, v] of Object.entries(defaultAbout)) {
-    if (localDB.settings[k] === undefined) {
-      localDB.settings[k] = v;
+    if (settings[k] === undefined) {
+      settings[k] = v;
       needsWrite = true;
     }
   }
-  if (needsWrite) {
-    writeLocalDB(localDB);
-  }
   
-  if (isCloud) {
-    try {
-      await db.collection(SETTINGS_COL).doc('system').set(localDB.settings);
-    } catch (e) {
-      console.error('Failed to seed settings in Firestore:', e);
+  if (needsWrite) {
+    if (isCloud) {
+      try {
+        await db.collection(SETTINGS_COL).doc('system').set(settings);
+      } catch (e) {
+        console.error('Failed to seed settings in Firestore:', e);
+      }
+    } else {
+      const localDB = readLocalDB();
+      localDB.settings = settings;
+      writeLocalDB(localDB);
     }
   }
-  return localDB.settings;
+  
+  return settings;
 };
 
 const saveSettings = async (settings) => {
