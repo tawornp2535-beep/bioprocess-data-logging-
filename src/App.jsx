@@ -174,6 +174,14 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
   const isAirHigh = (air_read > 500 || air_set > 500);
   const showAirOutWarning = isRpm250 && isAirHigh;
 
+  // VVM calculation: (Air Flow slpm) / (Working Liquid Volume in Liters)
+  // Assuming a standard total vessel working capacity of 5.0 Liters.
+  // Working Volume = (level_read / 100) * totalVolumeCapacity.
+  // If level_read is not available/zero, we default to full 5.0L capacity to prevent division by zero.
+  const totalVolumeCapacity = 5.0;
+  const workingVolumeLiters = level_read > 0 ? (level_read / 100) * totalVolumeCapacity : totalVolumeCapacity;
+  const calculatedVvm = (air_read / workingVolumeLiters).toFixed(2);
+
   // Deriving timestamp formatting
   const pad2 = (n) => String(n).padStart(2, '0');
   const formatTimeHHMM = (ts) => {
@@ -597,9 +605,15 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
           {/* Gas Inlet Flow slpm Box Overlaid on Inlet Pipe */}
           <div className="gas-inlet-display">
             <span className="display-label">AIR FLOW IN</span>
-            <div className="display-screen green-lcd">
-              <span className="screen-val">{air_read.toFixed(1)}</span>
-              <span className="screen-unit">slpm</span>
+            <div className="display-screen green-lcd" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px', minWidth: '75px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span className="screen-val" style={{ color: 'var(--accent-green)', textShadow: '0 0 5px rgba(16,185,129,0.8)' }}>{air_read.toFixed(1)}</span>
+                <span className="screen-unit">slpm</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '2px' }}>
+                <span className="screen-val" style={{ color: 'var(--accent-green)', textShadow: '0 0 5px rgba(16,185,129,0.8)' }}>{calculatedVvm}</span>
+                <span className="screen-unit">vvm</span>
+              </div>
             </div>
           </div>
 
@@ -662,7 +676,7 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
               <div className="gauge-label-row">
                 <span className="gauge-icon">🟢</span>
                 <span className="gauge-title">AIR FLOW IN</span>
-                <span className="gauge-value">{air_read.toFixed(1)} slpm</span>
+                <span className="gauge-value">{air_read.toFixed(1)} slpm / {calculatedVvm} vvm</span>
               </div>
               <div className="gauge-track-bar">
                 <div className="gauge-filled-bar green-bar" style={{ width: `${Math.min(100, Math.max(0, (air_read / 1000) * 100))}%` }}></div>
