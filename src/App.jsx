@@ -4486,9 +4486,11 @@ function App() {
                         key={p.key}
                         onClick={() => setVisibleParameters(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
                         style={{
-                          background: active ? `rgba(255,255,255,0.08)` : 'transparent',
+                          background: active 
+                            ? (theme === 'light' ? 'rgba(15, 23, 42, 0.06)' : 'rgba(255,255,255,0.08)') 
+                            : 'transparent',
                           borderColor: active ? p.color : 'var(--border-color)',
-                          color: active ? 'white' : 'var(--text-secondary)',
+                          color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
                           borderWidth: '1px',
                           borderStyle: 'solid',
                           borderRadius: '20px',
@@ -4681,7 +4683,7 @@ function App() {
                         style={{
                           borderColor: 'var(--accent-red)',
                           color: visibleParameters.temp ? 'white' : 'var(--accent-red)',
-                          background: visibleParameters.temp ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                          background: visibleParameters.temp ? 'var(--accent-red)' : 'transparent',
                           fontWeight: 600,
                           fontSize: '0.85rem',
                           padding: '6px 12px'
@@ -4695,7 +4697,7 @@ function App() {
                         style={{
                           borderColor: 'var(--accent-blue)',
                           color: visibleParameters.ph ? 'white' : 'var(--accent-blue)',
-                          background: visibleParameters.ph ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                          background: visibleParameters.ph ? 'var(--accent-blue)' : 'transparent',
                           fontWeight: 600,
                           fontSize: '0.85rem',
                           padding: '6px 12px'
@@ -4709,7 +4711,7 @@ function App() {
                         style={{
                           borderColor: 'var(--accent-green)',
                           color: visibleParameters.do ? 'white' : 'var(--accent-green)',
-                          background: visibleParameters.do ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                          background: visibleParameters.do ? 'var(--accent-green)' : 'transparent',
                           fontWeight: 600,
                           fontSize: '0.85rem',
                           padding: '6px 12px'
@@ -4723,7 +4725,7 @@ function App() {
                         style={{
                           borderColor: 'var(--accent-yellow)',
                           color: visibleParameters.agit ? 'white' : 'var(--accent-yellow)',
-                          background: visibleParameters.agit ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
+                          background: visibleParameters.agit ? 'var(--accent-yellow)' : 'transparent',
                           fontWeight: 600,
                           fontSize: '0.85rem',
                           padding: '6px 12px'
@@ -4737,7 +4739,7 @@ function App() {
                         style={{
                           borderColor: 'var(--accent-purple)',
                           color: visibleParameters.air ? 'white' : 'var(--accent-purple)',
-                          background: visibleParameters.air ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                          background: visibleParameters.air ? 'var(--accent-purple)' : 'transparent',
                           fontWeight: 600,
                           fontSize: '0.85rem',
                           padding: '6px 12px'
