@@ -2360,3 +2360,23 @@ body {
   background: rgba(15, 23, 42, 0.03);
   color: var(--text-secondary);
 }
+
+/* Warning animations for Air Outlet pipe warning */
+@keyframes svg-warning-pulse {
+  0% { opacity: 0.4; filter: drop-shadow(0 0 1px #ff3e3e); }
+  50% { opacity: 1.0; filter: drop-shadow(0 0 8px #ffb800); }
+  100% { opacity: 0.4; filter: drop-shadow(0 0 1px #ff3e3e); }
+}
+.svg-warning-pulse {
+  animation: svg-warning-pulse 1.2s infinite ease-in-out;
+  cursor: help;
+}
+
+@keyframes air-outlet-warning-flashing-anim {
+  0% { border-color: rgba(255, 62, 62, 0.3); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); }
+  50% { border-color: #ff3e3e; box-shadow: 0 0 12px rgba(255, 62, 62, 0.5); background: rgba(255, 0, 0, 0.12); }
+  100% { border-color: rgba(255, 62, 62, 0.3); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); }
+}
+.air-outlet-warning-flashing {
+  animation: air-outlet-warning-flashing-anim 1.2s infinite ease-in-out !important;
+}

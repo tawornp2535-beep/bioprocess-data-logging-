@@ -169,6 +169,11 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
   const heat_set = typeof dataPoint.heat_set === 'number' ? dataPoint.heat_set : 0.0;
   const heat_read = typeof dataPoint.heat_read === 'number' ? dataPoint.heat_read : 0.0;
 
+  // Warning conditions: RPM is 250 AND Air is > 500
+  const isRpm250 = (Math.round(agit_read) === 250 || Math.round(agit_set) === 250);
+  const isAirHigh = (air_read > 500 || air_set > 500);
+  const showAirOutWarning = isRpm250 && isAirHigh;
+
   // Deriving timestamp formatting
   const pad2 = (n) => String(n).padStart(2, '0');
   const formatTimeHHMM = (ts) => {
@@ -495,6 +500,14 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
               <path d="M 65 80 L 75 75 L 75 85 Z" fill="#ffffff" className="flow-arrow-animation-left" />
             )}
 
+            {/* Warning Sign near Air Outlet Pipe */}
+            {showAirOutWarning && (
+              <g className="svg-warning-pulse" transform="translate(68, 48)">
+                <path d="M 12 0 L 24 20 L 0 20 Z" fill="#ffb800" stroke="#ff3e3e" strokeWidth="2" />
+                <text x="12" y="16" fill="#000000" fontSize="13" fontWeight="bold" textAnchor="middle">!</text>
+              </g>
+            )}
+
             {/* Bottom Product Harvest pipe */}
             <path d="M 150 380 L 150 420 L 120 420" fill="none" stroke="#4b5563" strokeWidth="8" strokeLinecap="round" />
             {/* Gas Control Valve at bottom right */}
@@ -536,12 +549,17 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
           </div>
 
           {/* Air Outlet Flow slpm Box Overlaid on Outlet Pipe */}
-          <div className="air-outlet-display">
+          <div className={`air-outlet-display ${showAirOutWarning ? 'air-outlet-warning-flashing' : ''}`}>
             <span className="display-label">AIR OUT (PMa)</span>
             <div className="display-screen blue-lcd">
               <span className="screen-val">{air_out_read.toFixed(1)}</span>
               <span className="screen-unit">PMa</span>
             </div>
+            {showAirOutWarning && (
+              <span style={{ fontSize: '0.6rem', color: '#ff3e3e', fontWeight: 'bold', marginTop: '2px', textAlign: 'center' }}>
+                ⚠️ ระวัง! RPM & AIR สูง
+              </span>
+            )}
           </div>
 
         </div>
