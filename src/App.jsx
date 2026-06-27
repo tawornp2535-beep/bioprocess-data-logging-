@@ -4829,13 +4829,19 @@ function App() {
                       </div>
                     </div>
                     <div className="form-group">
-                      <label>VOLUME (L)</label>
+                      <label>VOLUME (L)
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 'normal', marginLeft: '6px' }}>
+                          (ถัง {maxVol} L)
+                        </span>
+                      </label>
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
                           <input
                             type="number"
                             step="0.1"
+                            min="0"
+                            max={maxVol}
                             name="level_set"
                             value={formData.level_set !== undefined && formData.level_set !== null && formData.level_set !== 0 ? formData.level_set : (formData.level_set === 0 ? 0 : '')}
                             onChange={(e) => {
@@ -4843,7 +4849,12 @@ function App() {
                               setFormData(prev => ({ ...prev, level_set: lit }));
                             }}
                             onFocus={(e) => { e.target.select(); if (!e.target.value || parseFloat(e.target.value) === 0) setFormData(prev => ({ ...prev, level_set: '' })); }}
-                            onBlur={(e) => { if (e.target.value === '' || isNaN(parseFloat(e.target.value))) setFormData(prev => ({ ...prev, level_set: 0 })); }}
+                            onBlur={(e) => {
+                              let v = parseFloat(e.target.value);
+                              if (isNaN(v) || e.target.value === '') v = 0;
+                              v = Math.min(maxVol, Math.max(0, v));
+                              setFormData(prev => ({ ...prev, level_set: v }));
+                            }}
                             disabled={currentJob?.status === 'finished'}
                           />
                         </div>
@@ -4852,6 +4863,8 @@ function App() {
                           <input
                             type="number"
                             step="0.1"
+                            min="0"
+                            max={maxVol}
                             name="level_read"
                             value={formData.level_read !== undefined && formData.level_read !== null && formData.level_read !== 0 ? formData.level_read : (formData.level_read === 0 ? 0 : '')}
                             onChange={(e) => {
@@ -4859,7 +4872,12 @@ function App() {
                               setFormData(prev => ({ ...prev, level_read: lit }));
                             }}
                             onFocus={(e) => { e.target.select(); if (!e.target.value || parseFloat(e.target.value) === 0) setFormData(prev => ({ ...prev, level_read: '' })); }}
-                            onBlur={(e) => { if (e.target.value === '' || isNaN(parseFloat(e.target.value))) setFormData(prev => ({ ...prev, level_read: 0 })); }}
+                            onBlur={(e) => {
+                              let v = parseFloat(e.target.value);
+                              if (isNaN(v) || e.target.value === '') v = 0;
+                              v = Math.min(maxVol, Math.max(0, v));
+                              setFormData(prev => ({ ...prev, level_read: v }));
+                            }}
                             disabled={currentJob?.status === 'finished'}
                           />
                         </div>
