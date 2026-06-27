@@ -650,16 +650,16 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
             <div className="gauge-item">
               <div className="gauge-label-row">
                 <span className="gauge-icon">🎚️</span>
-                <span className="gauge-title">VOLUME (LEVEL)</span>
-                <span className="gauge-value">{level_read.toFixed(1)} %</span>
+                <span className="gauge-title">VOLUME (L)</span>
+                <span className="gauge-value">{workingVolumeLiters.toFixed(1)} L</span>
               </div>
               <div className="gauge-track-bar">
                 <div className="gauge-filled-bar green-bar" style={{ width: `${Math.min(100, Math.max(0, level_read))}%` }}></div>
               </div>
               <div className="gauge-limits">
-                <span>0</span>
-                <span>50</span>
-                <span>100</span>
+                <span>0 L</span>
+                <span>{(maxVolumeLiters / 2).toFixed(1)} L</span>
+                <span>{maxVolumeLiters.toFixed(1)} L</span>
               </div>
             </div>
 
@@ -792,9 +792,9 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
 
         {/* Sparkline 1: Volume */}
         <div className="sparkline-card">
-          <span className="sparkline-title">VOLUME (%)</span>
+          <span className="sparkline-title">VOLUME (L)</span>
           <div className="sparkline-chart-area">
-            {renderSparkline(chartData, 'level_read', '#10b981', 0, 100)}
+            {renderSparkline(chartData, 'level_read', '#10b981', 0, maxVolumeLiters)}
           </div>
           <div className="sparkline-axis-labels">
             <span>{startLabel}</span>
@@ -1001,6 +1001,12 @@ function App() {
     airUnit: 'mlmin'
   });
   const [isEditingAbout, setIsEditingAbout] = useState(false);
+
+  const maxVol = aboutSystem?.maxVolumeLiters !== undefined ? Number(aboutSystem.maxVolumeLiters) : 5.0;
+  const calcVolumeLiters = (percentVal) => {
+    if (percentVal === undefined || percentVal === null || typeof percentVal !== 'number') return 0;
+    return parseFloat(((percentVal / 100) * maxVol).toFixed(1));
+  };
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -1558,8 +1564,8 @@ function App() {
     agit_set: row.agit_set !== undefined ? row.agit_set : row.agit,
     air_read: row.air_read !== undefined ? row.air_read : row.air,
     air_set: row.air_set !== undefined ? row.air_set : row.air,
-    level_set: row.level_set !== undefined && row.level_set !== null ? row.level_set : 65.0,
-    level_read: row.level_read !== undefined && row.level_read !== null ? row.level_read : 65.0,
+    level_set: row.level_set !== undefined && row.level_set !== null ? calcVolumeLiters(row.level_set) : calcVolumeLiters(65.0),
+    level_read: row.level_read !== undefined && row.level_read !== null ? calcVolumeLiters(row.level_read) : calcVolumeLiters(65.0),
     air_out_set: row.air_out_set !== undefined && row.air_out_set !== null ? row.air_out_set : parseFloat(((row.air_set !== undefined ? row.air_set : row.air || 0) * 0.96).toFixed(2)),
     air_out_read: row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((row.air_read !== undefined ? row.air_read : row.air || 0) * 0.96).toFixed(2)),
     heat_set: row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0,
@@ -2490,7 +2496,7 @@ function App() {
       'DO SV (%)', 'DO PV (%)',
       'Agit SV (RPM)', 'Agit PV (RPM)',
       'Air Flow SV (L/M)', 'Air Flow PV (L/M)',
-      'Volume SV (%)', 'Volume PV (%)',
+      'Volume SV (L)', 'Volume PV (L)',
       'Air Out SV (L/M)', 'Air Out PV (L/M)',
       'Heat SV (%)', 'Heat PV (%)',
       'Remarks'
@@ -2590,8 +2596,8 @@ function App() {
         'Agit PV (RPM)': row.agit_read !== undefined ? row.agit_read : row.agit,
         'Air Flow SV (L/M)': ai_s,
         'Air Flow PV (L/M)': ai_r,
-        'Volume SV (%)': row.level_set !== undefined && row.level_set !== null ? row.level_set : 65.0,
-        'Volume PV (%)': row.level_read !== undefined && row.level_read !== null ? row.level_read : 65.0,
+        'Volume SV (L)': row.level_set !== undefined && row.level_set !== null ? calcVolumeLiters(row.level_set) : calcVolumeLiters(65.0),
+        'Volume PV (L)': row.level_read !== undefined && row.level_read !== null ? calcVolumeLiters(row.level_read) : calcVolumeLiters(65.0),
         'Air Out SV (L/M)': row.air_out_set !== undefined && row.air_out_set !== null ? row.air_out_set : parseFloat(((ai_s || 0) * 0.96).toFixed(2)),
         'Air Out PV (L/M)': row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((ai_r || 0) * 0.96).toFixed(2)),
         'Heat SV (%)': row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0,
@@ -4757,15 +4763,39 @@ function App() {
                       </div>
                     </div>
                     <div className="form-group">
-                      <label>VOLUME (%)</label>
+                      <label>VOLUME (L)</label>
                       <div className="form-inputs-row">
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">ตั้งค่า (SV)</span>
-                          <input type="number" step="0.1" name="level_set" value={formData.level_set} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            name="level_set" 
+                            value={((formData.level_set || 0) / 100 * maxVol).toFixed(1)} 
+                            onChange={(e) => {
+                              const lit = parseFloat(e.target.value) || 0;
+                              setFormData(prev => ({ ...prev, level_set: (lit / maxVol) * 100 }));
+                            }} 
+                            onFocus={handleInputFocus} 
+                            onBlur={handleInputBlur} 
+                            disabled={currentJob?.status === 'finished'} 
+                          />
                         </div>
                         <div className="form-input-subgroup">
                           <span className="input-sublabel">อ่านค่า (PV)</span>
-                          <input type="number" step="0.1" name="level_read" value={formData.level_read} onChange={handleInputChange} onFocus={handleInputFocus} onBlur={handleInputBlur} disabled={currentJob?.status === 'finished'} />
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            name="level_read" 
+                            value={((formData.level_read || 0) / 100 * maxVol).toFixed(1)} 
+                            onChange={(e) => {
+                              const lit = parseFloat(e.target.value) || 0;
+                              setFormData(prev => ({ ...prev, level_read: (lit / maxVol) * 100 }));
+                            }} 
+                            onFocus={handleInputFocus} 
+                            onBlur={handleInputBlur} 
+                            disabled={currentJob?.status === 'finished'} 
+                          />
                         </div>
                       </div>
                     </div>
@@ -5551,7 +5581,7 @@ function App() {
                           {visibleParameters.do && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-green)' }}>DO (%)</th>}
                           {visibleParameters.agit && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-yellow)' }}>AGIT (RPM)</th>}
                           {visibleParameters.air && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-purple)' }}>AIR (L/M)</th>}
-                          {visibleParameters.level && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-green)' }}>VOLUME (%)</th>}
+                          {visibleParameters.level && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-green)' }}>VOLUME (L)</th>}
                           {visibleParameters.air_out && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-purple)' }}>AIR OUT (PMa)</th>}
                           {visibleParameters.heat && <th colSpan="2" style={{ textAlign: 'center', color: 'var(--accent-yellow)' }}>HEAT (%)</th>}
                           <th rowSpan="2" style={{ verticalAlign: 'middle', textAlign: 'left', padding: '12px', minWidth: '150px' }}>Remarks / บันทึก</th>
@@ -5749,8 +5779,8 @@ function App() {
                                     <input
                                       type="number"
                                       step="0.1"
-                                      value={editingRowData.level_set}
-                                      onChange={(e) => handleEditChange('level_set', parseFloat(e.target.value) || 0)}
+                                      value={((editingRowData.level_set || 0) / 100 * maxVol).toFixed(1)}
+                                      onChange={(e) => handleEditChange('level_set', (parseFloat(e.target.value) || 0) / maxVol * 100)}
                                       style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center' }}
                                     />
                                   </td>
@@ -5758,8 +5788,8 @@ function App() {
                                     <input
                                       type="number"
                                       step="0.1"
-                                      value={editingRowData.level_read}
-                                      onChange={(e) => handleEditChange('level_read', parseFloat(e.target.value) || 0)}
+                                      value={((editingRowData.level_read || 0) / 100 * maxVol).toFixed(1)}
+                                      onChange={(e) => handleEditChange('level_read', (parseFloat(e.target.value) || 0) / maxVol * 100)}
                                       style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '45px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
@@ -5877,8 +5907,8 @@ function App() {
                               )}
                               {visibleParameters.level && (
                                 <>
-                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? row.level_set.toFixed(1) : '-'}</td>
-                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? row.level_read.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? calcVolumeLiters(row.level_set) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? calcVolumeLiters(row.level_read) : '-'}</td>
                                 </>
                               )}
                               {visibleParameters.air_out && (
