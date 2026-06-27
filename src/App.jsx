@@ -909,6 +909,17 @@ function App() {
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(null);
   const [hasFetchedDB, setHasFetchedDB] = useState(false);
 
+  // Developer & System Info states
+  const [aboutSystem, setAboutSystem] = useState({
+    systemName: 'DBMS (Bioprocess Data Logging)',
+    systemVersion: 'v2.4.0 (SCADA Polish)',
+    developer: 'ทีมวิศวกรรมข้อมูลชีวภาพ (Bioprocess Engineering Team)',
+    techStack: 'React / Vite / Node.js / GCS',
+    supportEmail: 'support@bioprocess-logging.local',
+    supportPhone: '+66 2 123 4567'
+  });
+  const [isEditingAbout, setIsEditingAbout] = useState(false);
+
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -1325,6 +1336,26 @@ function App() {
 
   useEffect(() => {
     fetchDB(true);
+    
+    // Fetch public settings / about info
+    fetch('/api/settings')
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('Failed to fetch settings');
+      })
+      .then(data => {
+        if (data) {
+          setAboutSystem({
+            systemName: data.systemName || 'DBMS (Bioprocess Data Logging)',
+            systemVersion: data.systemVersion || 'v2.4.0 (SCADA Polish)',
+            developer: data.developer || 'ทีมวิศวกรรมข้อมูลชีวภาพ (Bioprocess Engineering Team)',
+            techStack: data.techStack || 'React / Vite / Node.js / GCS',
+            supportEmail: data.supportEmail || 'support@bioprocess-logging.local',
+            supportPhone: data.supportPhone || '+66 2 123 4567'
+          });
+        }
+      })
+      .catch(err => console.error('Error fetching about system settings:', err));
 
     const params = new URLSearchParams(window.location.search);
     const urlJobId = params.get('job');
@@ -4018,29 +4049,170 @@ function App() {
                   ⚙️ เกี่ยวกับผู้พัฒนา & ระบบ (About System)
                 </h3>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-primary)' }}>
-                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ชื่อระบบ:</span>
-                    <span style={{ fontWeight: 700 }}>DBMS (Bioprocess Data Logging)</span>
+                {!isEditingAbout ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-primary)' }}>
+                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ชื่อระบบ:</span>
+                      <span style={{ fontWeight: 700 }}>{aboutSystem.systemName}</span>
+                    </div>
+                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เวอร์ชันปัจจุบัน:</span>
+                      <span style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{aboutSystem.systemVersion}</span>
+                    </div>
+                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ผู้พัฒนาระบบ:</span>
+                      <span style={{ fontWeight: 700 }}>{aboutSystem.developer}</span>
+                    </div>
+                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เทคโนโลยีหลัก:</span>
+                      <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{aboutSystem.techStack}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>รายละเอียดติดต่อ / สนับสนุนเทคนิค:</span>
+                      <span style={{ fontSize: '0.85rem' }}>📧 {aboutSystem.supportEmail}</span>
+                      <span style={{ fontSize: '0.85rem' }}>📞 {aboutSystem.supportPhone}</span>
+                    </div>
+                    
+                    {userRole === 'admin' && (
+                      <button 
+                        onClick={() => setIsEditingAbout(true)} 
+                        className="btn btn-secondary" 
+                        style={{ width: '100%', margin: 0, marginTop: '1rem' }}
+                      >
+                        ✏️ แก้ไขข้อมูลผู้พัฒนา & ระบบ
+                      </button>
+                    )}
                   </div>
-                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เวอร์ชันปัจจุบัน:</span>
-                    <span style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>v2.4.0 (SCADA Polish)</span>
-                  </div>
-                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ผู้พัฒนาระบบ:</span>
-                    <span style={{ fontWeight: 700 }}>ทีมวิศวกรรมข้อมูลชีวภาพ (Bioprocess Engineering Team)</span>
-                  </div>
-                  <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เทคโนโลยีหลัก:</span>
-                    <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>React / Vite / Node.js / GCS</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>รายละเอียดติดต่อ / สนับสนุนเทคนิค:</span>
-                    <span style={{ fontSize: '0.85rem' }}>📧 support@bioprocess-logging.local</span>
-                    <span style={{ fontSize: '0.85rem' }}>📞 +66 2 123 4567</span>
-                  </div>
-                </div>
+                ) : (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const systemName = e.target.systemName.value;
+                    const systemVersion = e.target.systemVersion.value;
+                    const developer = e.target.developer.value;
+                    const techStack = e.target.techStack.value;
+                    const supportEmail = e.target.supportEmail.value;
+                    const supportPhone = e.target.supportPhone.value;
+                    
+                    const password = prompt('กรุณาป้อนรหัสผ่านแอดมิน เพื่อยืนยันการบันทึกการเปลี่ยนแปลง:');
+                    if (password === null) return; // User cancelled
+                    if (!password.trim()) {
+                      alert('จำเป็นต้องระบุรหัสผ่านแอดมินเพื่อดำเนินการ');
+                      return;
+                    }
+                    
+                    try {
+                      const res = await fetch('/api/settings/update-about', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          password,
+                          systemName,
+                          systemVersion,
+                          developer,
+                          techStack,
+                          supportEmail,
+                          supportPhone
+                        })
+                      });
+                      const result = await res.json();
+                      if (res.ok) {
+                        alert('อัปเดตข้อมูลผู้พัฒนาและระบบสำเร็จเรียบร้อยแล้ว');
+                        setAboutSystem(result.settings);
+                        setIsEditingAbout(false);
+                      } else {
+                        alert(`ผิดพลาด: ${result.error}`);
+                      }
+                    } catch (err) {
+                      console.error('Error updating developer settings:', err);
+                      alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อบันทึกข้อมูลได้');
+                    }
+                  }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    
+                    <div className="form-group" style={{ width: '100%' }}>
+                      <label style={{ fontSize: '0.78rem' }}>ชื่อระบบ (System Name)</label>
+                      <input 
+                        type="text" 
+                        name="systemName" 
+                        defaultValue={aboutSystem.systemName}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group" style={{ width: '100%' }}>
+                      <label style={{ fontSize: '0.78rem' }}>เวอร์ชันปัจจุบัน (System Version)</label>
+                      <input 
+                        type="text" 
+                        name="systemVersion" 
+                        defaultValue={aboutSystem.systemVersion}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group" style={{ width: '100%' }}>
+                      <label style={{ fontSize: '0.78rem' }}>ผู้พัฒนาระบบ (Developer Team)</label>
+                      <input 
+                        type="text" 
+                        name="developer" 
+                        defaultValue={aboutSystem.developer}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group" style={{ width: '100%' }}>
+                      <label style={{ fontSize: '0.78rem' }}>เทคโนโลยีหลัก (Core Tech)</label>
+                      <input 
+                        type="text" 
+                        name="techStack" 
+                        defaultValue={aboutSystem.techStack}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group" style={{ width: '100%' }}>
+                      <label style={{ fontSize: '0.78rem' }}>อีเมลสนับสนุน (Support Email)</label>
+                      <input 
+                        type="email" 
+                        name="supportEmail" 
+                        defaultValue={aboutSystem.supportEmail}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="form-group" style={{ width: '100%' }}>
+                      <label style={{ fontSize: '0.78rem' }}>เบอร์โทรศัพท์ (Support Phone)</label>
+                      <input 
+                        type="text" 
+                        name="supportPhone" 
+                        defaultValue={aboutSystem.supportPhone}
+                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
+                        required
+                      />
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsEditingAbout(false)} 
+                        className="btn btn-secondary" 
+                        style={{ flex: 1, margin: 0 }}
+                      >
+                        ยกเลิก
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="btn btn-blue" 
+                        style={{ flex: 1, margin: 0 }}
+                      >
+                        💾 บันทึกข้อมูล
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           </div>

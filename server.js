@@ -344,6 +344,26 @@ const getSettings = async () => {
   const localDB = readLocalDB();
   if (!localDB.settings) {
     localDB.settings = { adminPassword: 'admin123' };
+  }
+  
+  // Ensure default developer info is present
+  const defaultAbout = {
+    systemName: 'DBMS (Bioprocess Data Logging)',
+    systemVersion: 'v2.4.0 (SCADA Polish)',
+    developer: 'ทีมวิศวกรรมข้อมูลชีวภาพ (Bioprocess Engineering Team)',
+    techStack: 'React / Vite / Node.js / GCS',
+    supportEmail: 'support@bioprocess-logging.local',
+    supportPhone: '+66 2 123 4567'
+  };
+  
+  let needsWrite = false;
+  for (const [k, v] of Object.entries(defaultAbout)) {
+    if (localDB.settings[k] === undefined) {
+      localDB.settings[k] = v;
+      needsWrite = true;
+    }
+  }
+  if (needsWrite) {
     writeLocalDB(localDB);
   }
   
@@ -509,6 +529,32 @@ app.post('/api/settings/update-password', async (req, res) => {
   settings.adminPassword = newPassword.trim();
   await saveSettings(settings);
   res.json({ success: true });
+});
+
+app.get('/api/settings', async (req, res) => {
+  const settings = await getSettings();
+  const { adminPassword, ...publicSettings } = settings;
+  res.json(publicSettings);
+});
+
+app.post('/api/settings/update-about', async (req, res) => {
+  const { password, systemName, systemVersion, developer, techStack, supportEmail, supportPhone } = req.body;
+  const settings = await getSettings();
+  if (password !== settings.adminPassword) {
+    return res.status(400).json({ error: 'รหัสผ่านแอดมินยืนยันไม่ถูกต้อง' });
+  }
+
+  settings.systemName = (systemName || '').trim();
+  settings.systemVersion = (systemVersion || '').trim();
+  settings.developer = (developer || '').trim();
+  settings.techStack = (techStack || '').trim();
+  settings.supportEmail = (supportEmail || '').trim();
+  settings.supportPhone = (supportPhone || '').trim();
+
+  await saveSettings(settings);
+  
+  const { adminPassword: _, ...publicSettings } = settings;
+  res.json({ success: true, settings: publicSettings });
 });
 
 // ── Machines ─────────────────────────────────────────────
