@@ -591,19 +591,35 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
             <path d="M 200 370 L 200 420" fill="none" stroke="#4b5563" strokeWidth="4" />
             <polygon points="190,385 210,385 190,405 210,405" fill="#374151" stroke="#1f2937" strokeWidth="1" />
 
-            {/* Sensor Probe Lines (Left Wall) */}
-            {/* pH probe */}
-            <path d="M 50 150 L 80 150" stroke="#3b82f6" strokeWidth="2" strokeDasharray="3 3" />
-            <rect x="74" y="146" width="10" height="8" fill="#3b82f6" />
-            {/* DO probe */}
-            <path d="M 50 210 L 80 210" stroke="#10b981" strokeWidth="2" strokeDasharray="3 3" />
-            <rect x="74" y="206" width="10" height="8" fill="#10b981" />
-            {/* Temp probe */}
-            <path d="M 50 270 L 80 270" stroke="#ef4444" strokeWidth="2" strokeDasharray="3 3" />
-            <rect x="74" y="266" width="10" height="8" fill="#ef4444" />
-            {/* Level probe */}
-            <path d="M 50 330 L 80 330" stroke="#f59e0b" strokeWidth="2" strokeDasharray="3 3" />
-            <rect x="74" y="326" width="10" height="8" fill="#f59e0b" />
+            {/* Sensor Probe Lines (Left Wall) — Dynamic, scaled from maxVolumeLiters */}
+            {(() => {
+              // Tank body: top=120, bottom=350 → total height=230px for full volume
+              const tankTop = 120;
+              const tankBottom = 350;
+              const tankH = tankBottom - tankTop; // 230px
+              // Helper: convert volume fraction to Y position (top = max)
+              const volToY = (frac) => tankBottom - frac * tankH;
+
+              const probes = [
+                { frac: 0.85, color: '#3b82f6', label: 'pH',   vol: (0.85 * maxVolumeLiters) },
+                { frac: 0.60, color: '#10b981', label: 'DO',   vol: (0.60 * maxVolumeLiters) },
+                { frac: 0.35, color: '#ef4444', label: 'Temp', vol: (0.35 * maxVolumeLiters) },
+                { frac: 0.12, color: '#f59e0b', label: 'Lv',   vol: (0.12 * maxVolumeLiters) },
+              ];
+
+              return probes.map((p) => {
+                const y = volToY(p.frac);
+                return (
+                  <g key={p.label}>
+                    <path d={`M 38 ${y} L 80 ${y}`} stroke={p.color} strokeWidth="2" strokeDasharray="3 3" />
+                    <rect x="74" y={y - 4} width="10" height="8" fill={p.color} />
+                    <text x="35" y={y + 4} fill={p.color} fontSize="8" textAnchor="end" fontFamily="monospace">
+                      {p.vol.toFixed(0)}L
+                    </text>
+                  </g>
+                );
+              });
+            })()}
           </svg>
 
           {/* Motor Drive RPM Display Box Overlaid on Vessel Head */}
