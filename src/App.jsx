@@ -190,7 +190,11 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
     workingVolumeLiters = level_read > 0 ? level_read : maxVolumeLiters;
   }
   if (workingVolumeLiters <= 0) workingVolumeLiters = 5.0; // protection against zero/negative division
-  const calculatedVvm = (airLitersPerMinute / workingVolumeLiters).toFixed(2);
+  const rawVvm = airLitersPerMinute / workingVolumeLiters;
+  const calculatedVvm = rawVvm < 0.1 ? rawVvm.toFixed(4) : rawVvm.toFixed(2);
+  // Display air flow always in L/min for clarity
+  const airDisplayLpm = airUnit === 'mlmin' ? (air_read / 1000) : air_read;
+  const airSetDisplayLpm = airUnit === 'mlmin' ? (air_set / 1000) : air_set;
 
   // Deriving timestamp formatting
   const pad2 = (n) => String(n).padStart(2, '0');
@@ -348,9 +352,9 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
             </div>
             <div className="sensor-lcd-display blue-lcd">
               <span className="lcd-value">{level_read.toFixed(1)}</span>
-              <span className="lcd-unit">%</span>
+              <span className="lcd-unit">L</span>
             </div>
-            <div className="sensor-sv-label">SV (Set): {level_set.toFixed(1)}%</div>
+            <div className="sensor-sv-label">SV (Set): {level_set.toFixed(1)} L</div>
           </div>
 
         </div>
@@ -617,8 +621,8 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
             <span className="display-label">AIR FLOW IN</span>
             <div className="display-screen green-lcd" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px', minWidth: '75px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span className="screen-val" style={{ color: 'var(--accent-green)', textShadow: '0 0 5px rgba(16,185,129,0.8)' }}>{air_read.toFixed(1)}</span>
-                <span className="screen-unit">{airUnit === 'mlmin' ? 'mL/min' : 'slpm'}</span>
+                <span className="screen-val" style={{ color: 'var(--accent-green)', textShadow: '0 0 5px rgba(16,185,129,0.8)' }}>{airDisplayLpm.toFixed(2)}</span>
+                <span className="screen-unit">L/min</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderTop: '1px solid rgba(16,185,129,0.2)', paddingTop: '2px' }}>
                 <span className="screen-val" style={{ color: 'var(--accent-green)', textShadow: '0 0 5px rgba(16,185,129,0.8)' }}>{calculatedVvm}</span>
@@ -686,7 +690,7 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
               <div className="gauge-label-row">
                 <span className="gauge-icon">🟢</span>
                 <span className="gauge-title">AIR FLOW IN</span>
-                <span className="gauge-value">{air_read.toFixed(1)} {airUnit === 'mlmin' ? 'mL/min' : 'slpm'} / {calculatedVvm} vvm</span>
+                <span className="gauge-value">{airDisplayLpm.toFixed(2)} L/min / {calculatedVvm} vvm</span>
               </div>
               <div className="gauge-track-bar">
                 <div className="gauge-filled-bar green-bar" style={{ width: `${Math.min(100, Math.max(0, (air_read / 1000) * 100))}%` }}></div>
