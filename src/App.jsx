@@ -285,8 +285,12 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
     transformOrigin: '150px 307.5px'
   } : {};
 
-  // Bubbling animation styling based on Air Flow
-  const airBubbleCount = !isMachineStoppedVisual && air_read > 0 ? Math.min(20, Math.floor(air_read * 3) + 2) : 0;
+  // Calculate liquid surface Y coordinate and travel distance for bubbles
+  const liquidTopY = 360 - (level_read / physicalMaxVolume) * 230;
+  const travelDist = 340 - liquidTopY;
+
+  // Bubbling animation styling based on Air Flow (VVM and L/min)
+  const airBubbleCount = !isMachineStoppedVisual && airLitersPerMinute > 0 ? Math.min(150, Math.floor(rawVvm * 80) + 20) : 0;
 
   // Heating power color intensity mapping for the jacket glow
   const heatReadForVisual = isMachineStoppedVisual ? 0 : heat_read;
@@ -438,7 +442,6 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
 
             {/* Inside Liquid Media (Golden broth) */}
             {level_read > 0 && (() => {
-              const liquidTopY = 360 - (level_read / physicalMaxVolume) * 230;
               const amp = isMachineStoppedVisual ? 0.5 : Math.min(4, 1 + (agit_read / 80));
               const wavePath = `M -100 ${liquidTopY}
                 Q -75 ${liquidTopY - amp} -50 ${liquidTopY}
@@ -471,25 +474,70 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
               );
             })()}
 
+            {/* Foam Layer on Liquid Surface */}
+            {airLitersPerMinute > 0 && level_read > 0 && (
+              <g clipPath="url(#liquid-clip)">
+                {(() => {
+                  const foamCircles = [];
+                  const layers = Math.min(3, Math.max(1, Math.floor(rawVvm * 1.5) + 1));
+                  const bubblesPerLayer = Math.min(30, Math.floor(rawVvm * 10) + 12);
+                  
+                  for (let layer = 0; layer < layers; layer++) {
+                    const yOffset = liquidTopY - (layer * 3.5);
+                    const opacity = 0.5 - (layer * 0.1);
+                    
+                    for (let j = 0; j < bubblesPerLayer; j++) {
+                      const ratio = j / (bubblesPerLayer - 1 || 1);
+                      const rx = 76 + ratio * 148 + (Math.sin(j + layer) * 2.5);
+                      const rRadius = 2.5 + ((j + layer) % 3) * 1.2;
+                      const floatAnimDelay = `${(j * 0.06 + layer * 0.2).toFixed(2)}s`;
+                      const floatAnimDuration = `${1.2 + (j % 3) * 0.4}s`;
+                      
+                      foamCircles.push(
+                        <circle
+                          key={`foam-${layer}-${j}`}
+                          cx={rx}
+                          cy={yOffset}
+                          r={rRadius}
+                          fill="#ffffff"
+                          opacity={opacity}
+                          style={{
+                            animation: `foam-float ${floatAnimDuration} infinite ease-in-out`,
+                            animationDelay: floatAnimDelay
+                          }}
+                        />
+                      );
+                    }
+                  }
+                  return foamCircles;
+                })()}
+              </g>
+            )}
+
             {/* Rising Bubbles (Simulated Gas Sparger) */}
-            {air_read > 0 && level_read > (0.2 * physicalMaxVolume) && (
-              <g>
+            {airBubbleCount > 0 && level_read > 0 && (
+              <g clipPath="url(#liquid-clip)">
                 {[...Array(airBubbleCount)].map((_, i) => {
-                  const rx = 80 + (i * 13) % 140;
-                  const ry = 340 - (i * 17) % (Math.max(20, (level_read / physicalMaxVolume) * 210));
-                  const rRadius = 1.5 + (i % 3);
+                  const cx = 105 + (i * 7) % 90;
+                  const cy = 338 + (i % 5);
+                  const rRadius = 0.8 + (i % 3) * 0.5;
+                  const duration = (0.8 + (i % 10) * 0.15) * (1 / (0.6 + Math.min(1.4, rawVvm * 0.5)));
+                  const delay = (i * 0.04).toFixed(2);
+                  const wobble = (4 + (i % 4) * 4) * (i % 2 === 0 ? 1 : -1);
+                  
                   return (
                     <circle
-                      key={i}
-                      cx={rx}
-                      cy={ry}
+                      key={`bubble-${i}`}
+                      cx={cx}
+                      cy={cy}
                       r={rRadius}
                       fill="#ffffff"
-                      opacity="0.6"
-                      className="rising-bubble-element"
+                      opacity="0.7"
                       style={{
-                        animation: `bubble-rise ${1 + (i % 2)}s infinite ease-in-out`,
-                        animationDelay: `${i * 0.1}s`
+                        animation: `bubble-rise ${duration}s infinite linear`,
+                        animationDelay: `${delay}s`,
+                        '--travel-dist': `-${travelDist}px`,
+                        '--wobble': `${wobble}px`
                       }}
                     />
                   );

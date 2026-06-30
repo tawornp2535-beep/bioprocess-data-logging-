@@ -1805,21 +1805,30 @@ body {
 
 @keyframes bubble-rise {
   0% {
-    transform: translateY(0) scale(0.8);
+    transform: translateY(0) translateX(0) scale(0.6);
     opacity: 0;
   }
-
-  10% {
-    opacity: 0.6;
+  15% {
+    opacity: 0.8;
   }
-
-  90% {
-    opacity: 0.6;
+  85% {
+    opacity: 0.8;
   }
-
   100% {
-    transform: translateY(-120px) scale(1.2);
+    transform: translateY(var(--travel-dist, -120px)) translateX(var(--wobble, 0px)) scale(1.2);
     opacity: 0;
+  }
+}
+
+@keyframes foam-float {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-1.5px) scale(1.05);
+  }
+  100% {
+    transform: translateY(0) scale(1);
   }
 }
 
