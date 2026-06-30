@@ -151,6 +151,15 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
   }
 
   const maxVolumeLiters = aboutSystem?.maxVolumeLiters !== undefined ? Number(aboutSystem.maxVolumeLiters) : 5.0;
+  let physicalMaxVolume = maxVolumeLiters;
+  const mName = (machineName || '').toLowerCase();
+  if (mName.includes('750') || mName.includes('500')) {
+    physicalMaxVolume = 750.0;
+  } else if (mName.includes('70')) {
+    physicalMaxVolume = 70.0;
+  } else if (mName.includes('10')) {
+    physicalMaxVolume = 10.0;
+  }
 
   // Extract PV & SV
   const temp_set = typeof dataPoint.temp_set === 'number' ? dataPoint.temp_set : 37.0;
@@ -224,14 +233,22 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
       );
     }
 
-    const points = data.map((d, i) => {
-      const val = d[key] !== undefined ? d[key] : 0;
-      const x = (i / Math.max(1, data.length - 1)) * width;
-      const range = maxVal - minVal;
-      const normalized = range > 0 ? (val - minVal) / range : 0.5;
-      const y = height - Math.min(height, Math.max(0, normalized * height));
-      return `${x},${y}`;
-    }).join(' ');
+    const points = data.length === 1
+      ? (() => {
+          const val = data[0][key] !== undefined ? data[0][key] : 0;
+          const range = maxVal - minVal;
+          const normalized = range > 0 ? (val - minVal) / range : 0.5;
+          const y = height - Math.min(height, Math.max(0, normalized * height));
+          return `0,${y} ${width},${y}`;
+        })()
+      : data.map((d, i) => {
+          const val = d[key] !== undefined ? d[key] : 0;
+          const x = (i / Math.max(1, data.length - 1)) * width;
+          const range = maxVal - minVal;
+          const normalized = range > 0 ? (val - minVal) / range : 0.5;
+          const y = height - Math.min(height, Math.max(0, normalized * height));
+          return `${x},${y}`;
+        }).join(' ');
 
     return (
       <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ overflow: 'visible' }}>
@@ -421,7 +438,7 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
 
             {/* Inside Liquid Media (Golden broth) */}
             {level_read > 0 && (() => {
-              const liquidTopY = 360 - (level_read / maxVolumeLiters) * 230;
+              const liquidTopY = 360 - (level_read / physicalMaxVolume) * 230;
               const amp = isMachineStoppedVisual ? 0.5 : Math.min(4, 1 + (agit_read / 80));
               const wavePath = `M -100 ${liquidTopY}
                 Q -75 ${liquidTopY - amp} -50 ${liquidTopY}
@@ -455,11 +472,11 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
             })()}
 
             {/* Rising Bubbles (Simulated Gas Sparger) */}
-            {air_read > 0 && level_read > (0.2 * maxVolumeLiters) && (
+            {air_read > 0 && level_read > (0.2 * physicalMaxVolume) && (
               <g>
                 {[...Array(airBubbleCount)].map((_, i) => {
                   const rx = 80 + (i * 13) % 140;
-                  const ry = 340 - (i * 17) % (Math.max(20, (level_read / maxVolumeLiters) * 210));
+                  const ry = 340 - (i * 17) % (Math.max(20, (level_read / physicalMaxVolume) * 210));
                   const rRadius = 1.5 + (i % 3);
                   return (
                     <circle
@@ -597,33 +614,71 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
             {(() => {
               const tankBottom = 350;
               const tankH = 230; // px for full volume
-              const volToY = (vol) => tankBottom - (vol / maxVolumeLiters) * tankH;
+              const volToY = (vol) => tankBottom - (vol / physicalMaxVolume) * tankH;
 
-              // Step size: 50 L for large tanks, smaller for small tanks
-              const step = maxVolumeLiters <= 20 ? 2
-                : maxVolumeLiters <= 100 ? 10
-                : maxVolumeLiters <= 300 ? 25
-                : 50;
+              // Determine capacity, physical size, and custom ticks based on machineName
+              let physicalMaxVolume = maxVolumeLiters;
+              let ticks = [];
+              let step = 50;
+              let isCustom = false;
 
-              const ticks = [];
-              for (let v = step; v < maxVolumeLiters; v += step) {
-                ticks.push(v);
+              const mName = (machineName || '').toLowerCase();
+              if (mName.includes('750') || mName.includes('500')) {
+                physicalMaxVolume = 750.0;
+                step = 50;
+                isCustom = true;
+                for (let v = 100; v <= 750; v += 50) {
+                  ticks.push(v);
+                }
+              } else if (mName.includes('70')) {
+                physicalMaxVolume = 70.0;
+                step = 5;
+                isCustom = true;
+                for (let v = 20; v <= 70; v += 5) {
+                  ticks.push(v);
+                }
+              } else if (mName.includes('10')) {
+                physicalMaxVolume = 10.0;
+                step = 1;
+                isCustom = true;
+                for (let v = 1; v <= 10; v += 1) {
+                  ticks.push(v);
+                }
+              } else {
+                step = maxVolumeLiters <= 20 ? 2
+                  : maxVolumeLiters <= 100 ? 10
+                  : maxVolumeLiters <= 300 ? 25
+                  : 50;
+                for (let v = step; v < maxVolumeLiters; v += step) {
+                  ticks.push(v);
+                }
               }
 
               return (
                 <g>
                   {/* Vertical ruler line */}
-                  <line x1="63" y1={volToY(maxVolumeLiters)} x2="63" y2={volToY(0)} stroke="#64748b" strokeWidth="1" />
-                  {/* Max label */}
-                  <line x1="58" y1={volToY(maxVolumeLiters)} x2="70" y2={volToY(maxVolumeLiters)} stroke="#94a3b8" strokeWidth="1.5" />
-                  <text x="55" y={volToY(maxVolumeLiters) + 4} fill="#94a3b8" fontSize="7.5" textAnchor="end" fontFamily="monospace">{maxVolumeLiters.toFixed(0)}L</text>
-                  {/* 0 label */}
+                  <line x1="63" y1={volToY(physicalMaxVolume)} x2="63" y2={volToY(0)} stroke="#64748b" strokeWidth="1" />
+                  
+                  {/* 0 label (always visible) */}
                   <line x1="58" y1={volToY(0)} x2="70" y2={volToY(0)} stroke="#64748b" strokeWidth="1" />
                   <text x="55" y={volToY(0) + 4} fill="#64748b" fontSize="7.5" textAnchor="end" fontFamily="monospace">0L</text>
-                  {/* Intermediate ticks */}
+                  
+                  {/* For fallback: draw max volume label separately if not custom */}
+                  {!isCustom && (
+                    <>
+                      <line x1="58" y1={volToY(maxVolumeLiters)} x2="70" y2={volToY(maxVolumeLiters)} stroke="#94a3b8" strokeWidth="1.5" />
+                      <text x="55" y={volToY(maxVolumeLiters) + 4} fill="#94a3b8" fontSize="7.5" textAnchor="end" fontFamily="monospace">{maxVolumeLiters.toFixed(0)}L</text>
+                    </>
+                  )}
+
+                  {/* Intermediate/Custom ticks */}
                   {ticks.map((v) => {
                     const y = volToY(v);
-                    const isMajor = v % (step * 2) === 0;
+                    const isMajor =
+                      physicalMaxVolume === 750.0 ? (v % 100 === 0 || v === 750) :
+                      physicalMaxVolume === 70.0 ? (v % 10 === 0) :
+                      physicalMaxVolume === 10.0 ? (v % 2 === 0 || v === 1) :
+                      (v % (step * 2) === 0);
                     // Current level indicator line
                     const isNearLevel = Math.abs(v - level_read) < step * 0.5;
                     return (
@@ -653,7 +708,7 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
                     );
                   })}
                   {/* Current liquid level indicator arrow */}
-                  {level_read > 0 && level_read <= maxVolumeLiters && (
+                  {level_read > 0 && level_read <= physicalMaxVolume && (
                     <g>
                       <line x1="56" y1={volToY(level_read)} x2="80" y2={volToY(level_read)} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="2 2" />
                       <polygon
@@ -1067,12 +1122,11 @@ function App() {
     airUnit: 'mlmin'
   });
   const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [showEditMachineModal, setShowEditMachineModal] = useState(false);
+  const [editingMachineId, setEditingMachineId] = useState('');
+  const [editingMachineName, setEditingMachineName] = useState('');
 
-  const maxVol = aboutSystem?.maxVolumeLiters !== undefined ? Number(aboutSystem.maxVolumeLiters) : 5.0;
-  const calcVolumeLiters = (val) => {
-    if (val === undefined || val === null || typeof val !== 'number') return 0;
-    return parseFloat(val.toFixed(1));
-  };
+  
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -1596,6 +1650,20 @@ function App() {
   // Derived state
   const jobsForMachine = jobs.filter(j => j.machineId === currentMachineId);
   const currentMachine = machines.find(m => m.id === currentMachineId);
+
+  const getDynamicMaxVol = () => {
+    if (!currentMachine) return aboutSystem?.maxVolumeLiters !== undefined ? Number(aboutSystem.maxVolumeLiters) : 5.0;
+    const name = currentMachine.name.toLowerCase();
+    if (name.includes('750') || name.includes('500')) return 750.0;
+    if (name.includes('70')) return 70.0;
+    if (name.includes('10')) return 10.0;
+    return aboutSystem?.maxVolumeLiters !== undefined ? Number(aboutSystem.maxVolumeLiters) : 5.0;
+  };
+  const maxVol = getDynamicMaxVol();
+  const calcVolumeLiters = (percentVal) => {
+    if (percentVal === undefined || percentVal === null || typeof percentVal !== 'number') return 0;
+    return parseFloat(((percentVal / 100) * maxVol).toFixed(1));
+  };
   const currentJob = jobs.find(j => j.id === currentJobId) || jobsForMachine[0];
   const currentJobData = currentJob?.data || [];
 
@@ -1630,8 +1698,8 @@ function App() {
     agit_set: row.agit_set !== undefined ? row.agit_set : row.agit,
     air_read: row.air_read !== undefined ? row.air_read : row.air,
     air_set: row.air_set !== undefined ? row.air_set : row.air,
-    level_set: row.level_set !== undefined && row.level_set !== null ? calcVolumeLiters(row.level_set) : calcVolumeLiters(0.65 * maxVol),
-    level_read: row.level_read !== undefined && row.level_read !== null ? calcVolumeLiters(row.level_read) : calcVolumeLiters(0.65 * maxVol),
+    level_set: row.level_set !== undefined && row.level_set !== null ? calcVolumeLiters(row.level_set) : calcVolumeLiters(65.0),
+    level_read: row.level_read !== undefined && row.level_read !== null ? calcVolumeLiters(row.level_read) : calcVolumeLiters(65.0),
     air_out_set: row.air_out_set !== undefined && row.air_out_set !== null ? row.air_out_set : parseFloat(((row.air_set !== undefined ? row.air_set : row.air || 0) * 0.96).toFixed(2)),
     air_out_read: row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((row.air_read !== undefined ? row.air_read : row.air || 0) * 0.96).toFixed(2)),
     heat_set: row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0,
@@ -1819,8 +1887,8 @@ function App() {
         agit_read: lastDataPoint.agit_read,
         air_set: lastDataPoint.air_set,
         air_read: lastDataPoint.air_read,
-        level_set: lastDataPoint.level_set !== undefined && lastDataPoint.level_set !== null ? lastDataPoint.level_set : (0.65 * maxVol),
-        level_read: lastDataPoint.level_read !== undefined && lastDataPoint.level_read !== null ? lastDataPoint.level_read : (0.65 * maxVol),
+        level_set: lastDataPoint.level_set !== undefined && lastDataPoint.level_set !== null ? (lastDataPoint.level_set / maxVol) * 100 : 65.0,
+        level_read: lastDataPoint.level_read !== undefined && lastDataPoint.level_read !== null ? (lastDataPoint.level_read / maxVol) * 100 : 65.0,
         air_out_set: lastDataPoint.air_out_set !== undefined && lastDataPoint.air_out_set !== null ? lastDataPoint.air_out_set : parseFloat(((lastDataPoint.air_set || 0) * 0.96).toFixed(2)),
         air_out_read: lastDataPoint.air_out_read !== undefined && lastDataPoint.air_out_read !== null ? lastDataPoint.air_out_read : parseFloat(((lastDataPoint.air_read || 0) * 0.96).toFixed(2)),
         heat_set: lastDataPoint.heat_set !== undefined && lastDataPoint.heat_set !== null ? lastDataPoint.heat_set : 0,
@@ -1841,8 +1909,8 @@ function App() {
         agit_read: 200,
         air_set: 2.0,
         air_read: 2.0,
-        level_set: (0.65 * maxVol),
-        level_read: (0.65 * maxVol),
+        level_set: 65.0,
+        level_read: 65.0,
         air_out_set: 1.9,
         air_out_read: 1.9,
         heat_set: 0,
@@ -1918,24 +1986,36 @@ function App() {
     }
   };
 
-  const renameMachine = async () => {
+  const renameMachine = () => {
     const activeMachine = machines.find(m => m.id === currentMachineId);
     if (!activeMachine) return;
-    const newName = prompt("Enter new name for the machine:", activeMachine.name);
-    if (newName && newName.trim() && newName.trim() !== activeMachine.name) {
-      try {
-        const res = await fetch(`/api/machines/${currentMachineId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: newName.trim() })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          applyDBUpdate(data);
-        }
-      } catch (err) {
-        console.error(err);
+    setEditingMachineId(activeMachine.id);
+    setEditingMachineName(activeMachine.name);
+    setShowEditMachineModal(true);
+  };
+
+  const submitEditMachine = async (e) => {
+    if (e) e.preventDefault();
+    if (!editingMachineName.trim()) {
+      alert("กรุณากรอกชื่อเครื่องมือ");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/machines/${editingMachineId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingMachineName.trim() })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        applyDBUpdate(data);
+        setShowEditMachineModal(false);
+      } else {
+        alert("ไม่สามารถแก้ไขชื่อเครื่องมือได้");
       }
+    } catch (err) {
+      console.error(err);
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
   };
 
@@ -2586,8 +2666,8 @@ function App() {
       const ag_r = row.agit_read !== undefined ? row.agit_read : row.agit;
       const ai_s = row.air_set !== undefined ? row.air_set : row.air;
       const ai_r = row.air_read !== undefined ? row.air_read : row.air;
-      const lv_s = row.level_set !== undefined && row.level_set !== null ? row.level_set : (0.65 * maxVol);
-      const lv_r = row.level_read !== undefined && row.level_read !== null ? row.level_read : (0.65 * maxVol);
+      const lv_s = row.level_set !== undefined && row.level_set !== null ? row.level_set : 65.0;
+      const lv_r = row.level_read !== undefined && row.level_read !== null ? row.level_read : 65.0;
       const ao_s = row.air_out_set !== undefined && row.air_out_set !== null ? row.air_out_set : parseFloat(((ai_s || 0) * 0.96).toFixed(2));
       const ao_r = row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((ai_r || 0) * 0.96).toFixed(2));
       const ht_s = row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0;
@@ -2664,8 +2744,8 @@ function App() {
         'Agit PV (RPM)': row.agit_read !== undefined ? row.agit_read : row.agit,
         'Air Flow SV (L/M)': ai_s,
         'Air Flow PV (L/M)': ai_r,
-        'Volume SV (L)': row.level_set !== undefined && row.level_set !== null ? calcVolumeLiters(row.level_set) : calcVolumeLiters(0.65 * maxVol),
-        'Volume PV (L)': row.level_read !== undefined && row.level_read !== null ? calcVolumeLiters(row.level_read) : calcVolumeLiters(0.65 * maxVol),
+        'Volume SV (L)': row.level_set !== undefined && row.level_set !== null ? calcVolumeLiters(row.level_set) : calcVolumeLiters(65.0),
+        'Volume PV (L)': row.level_read !== undefined && row.level_read !== null ? calcVolumeLiters(row.level_read) : calcVolumeLiters(65.0),
         'Air Out SV (L/M)': row.air_out_set !== undefined && row.air_out_set !== null ? row.air_out_set : parseFloat(((ai_s || 0) * 0.96).toFixed(2)),
         'Air Out PV (L/M)': row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((ai_r || 0) * 0.96).toFixed(2)),
         'Heat SV (%)': row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0,
@@ -3628,14 +3708,9 @@ function App() {
                         className="export-btn"
                         style={{ padding: '6px 12px', fontSize: '0.8rem', margin: 0 }}
                         onClick={() => {
-                          const newName = prompt("แก้ไขชื่อเครื่องมือ:", m.name);
-                          if (newName && newName.trim() && newName.trim() !== m.name) {
-                            fetch(`/api/machines/${m.id}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ name: newName.trim() })
-                            }).then(res => res.ok && res.json()).then(data => data && applyDBUpdate(data));
-                          }
+                          setEditingMachineId(m.id);
+                          setEditingMachineName(m.name);
+                          setShowEditMachineModal(true);
                         }}
                       >
                         แก้ไขชื่อ
@@ -4253,19 +4328,11 @@ function App() {
                     const supportEmail = e.target.supportEmail.value;
                     const supportPhone = e.target.supportPhone.value;
 
-                    const password = prompt('กรุณาป้อนรหัสผ่านแอดมิน เพื่อยืนยันการบันทึกการเปลี่ยนแปลง:');
-                    if (password === null) return; // User cancelled
-                    if (!password.trim()) {
-                      alert('จำเป็นต้องระบุรหัสผ่านแอดมินเพื่อดำเนินการ');
-                      return;
-                    }
-
                     try {
                       const res = await fetch('/api/settings/update-about', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                          password,
                           systemName,
                           systemVersion,
                           developer,
@@ -4388,19 +4455,11 @@ function App() {
                   const constantVolumeLiters = e.target.constantVolumeLiters ? e.target.constantVolumeLiters.value : aboutSystem.constantVolumeLiters;
                   const airUnit = e.target.airUnit.value;
 
-                  const password = prompt('กรุณาป้อนรหัสผ่านแอดมิน เพื่อยืนยันการตั้งค่า VVM:');
-                  if (password === null) return;
-                  if (!password.trim()) {
-                    alert('จำเป็นต้องระบุรหัสผ่านแอดมินเพื่อดำเนินการ');
-                    return;
-                  }
-
                   try {
                     const res = await fetch('/api/settings/update-vvm', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
-                        password,
                         vvmCalcType,
                         maxVolumeLiters,
                         constantVolumeLiters,
@@ -4461,7 +4520,11 @@ function App() {
                         name="maxVolumeLiters"
                         step="0.1"
                         min="0.1"
-                        defaultValue={aboutSystem.maxVolumeLiters || 5.0}
+                        value={aboutSystem.maxVolumeLiters !== undefined && aboutSystem.maxVolumeLiters !== null ? aboutSystem.maxVolumeLiters : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAboutSystem(prev => ({ ...prev, maxVolumeLiters: val }));
+                        }}
                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
                         required
                       />
@@ -4477,7 +4540,11 @@ function App() {
                         name="constantVolumeLiters"
                         step="0.1"
                         min="0.1"
-                        defaultValue={aboutSystem.constantVolumeLiters || 3.5}
+                        value={aboutSystem.constantVolumeLiters !== undefined && aboutSystem.constantVolumeLiters !== null ? aboutSystem.constantVolumeLiters : ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAboutSystem(prev => ({ ...prev, constantVolumeLiters: val }));
+                        }}
                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
                         required
                       />
@@ -4845,17 +4912,17 @@ function App() {
                             min="0"
                             max={maxVol}
                             name="level_set"
-                            value={formData.level_set !== undefined && formData.level_set !== null && formData.level_set !== 0 ? formData.level_set : (formData.level_set === 0 ? 0 : '')}
+                            value={formData.level_set !== undefined && formData.level_set !== null && formData.level_set !== 0 ? parseFloat(((formData.level_set / 100) * maxVol).toFixed(1)) : (formData.level_set === 0 ? 0 : '')}
                             onChange={(e) => {
                               const lit = e.target.value === '' ? '' : parseFloat(e.target.value);
-                              setFormData(prev => ({ ...prev, level_set: lit }));
+                              setFormData(prev => ({ ...prev, level_set: lit === '' ? '' : (lit / maxVol) * 100 }));
                             }}
                             onFocus={(e) => { e.target.select(); if (!e.target.value || parseFloat(e.target.value) === 0) setFormData(prev => ({ ...prev, level_set: '' })); }}
                             onBlur={(e) => {
                               let v = parseFloat(e.target.value);
                               if (isNaN(v) || e.target.value === '') v = 0;
                               v = Math.min(maxVol, Math.max(0, v));
-                              setFormData(prev => ({ ...prev, level_set: v }));
+                              setFormData(prev => ({ ...prev, level_set: (v / maxVol) * 100 }));
                             }}
                             disabled={currentJob?.status === 'finished'}
                           />
@@ -4868,17 +4935,17 @@ function App() {
                             min="0"
                             max={maxVol}
                             name="level_read"
-                            value={formData.level_read !== undefined && formData.level_read !== null && formData.level_read !== 0 ? formData.level_read : (formData.level_read === 0 ? 0 : '')}
+                            value={formData.level_read !== undefined && formData.level_read !== null && formData.level_read !== 0 ? parseFloat(((formData.level_read / 100) * maxVol).toFixed(1)) : (formData.level_read === 0 ? 0 : '')}
                             onChange={(e) => {
                               const lit = e.target.value === '' ? '' : parseFloat(e.target.value);
-                              setFormData(prev => ({ ...prev, level_read: lit }));
+                              setFormData(prev => ({ ...prev, level_read: lit === '' ? '' : (lit / maxVol) * 100 }));
                             }}
                             onFocus={(e) => { e.target.select(); if (!e.target.value || parseFloat(e.target.value) === 0) setFormData(prev => ({ ...prev, level_read: '' })); }}
                             onBlur={(e) => {
                               let v = parseFloat(e.target.value);
                               if (isNaN(v) || e.target.value === '') v = 0;
                               v = Math.min(maxVol, Math.max(0, v));
-                              setFormData(prev => ({ ...prev, level_read: v }));
+                              setFormData(prev => ({ ...prev, level_read: (v / maxVol) * 100 }));
                             }}
                             disabled={currentJob?.status === 'finished'}
                           />
@@ -5866,8 +5933,8 @@ function App() {
                                     <input
                                       type="number"
                                       step="0.1"
-                                      value={editingRowData.level_set !== undefined && editingRowData.level_set !== null ? editingRowData.level_set : ''}
-                                      onChange={(e) => handleEditChange('level_set', parseFloat(e.target.value) || 0)}
+                                      value={editingRowData.level_set !== undefined && editingRowData.level_set !== null ? parseFloat(((editingRowData.level_set / 100) * maxVol).toFixed(1)) : ''}
+                                      onChange={(e) => handleEditChange('level_set', (parseFloat(e.target.value) || 0) / maxVol * 100)}
                                       style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '55px', textAlign: 'center' }}
                                     />
                                   </td>
@@ -5875,8 +5942,8 @@ function App() {
                                     <input
                                       type="number"
                                       step="0.1"
-                                      value={editingRowData.level_read !== undefined && editingRowData.level_read !== null ? editingRowData.level_read : ''}
-                                      onChange={(e) => handleEditChange('level_read', parseFloat(e.target.value) || 0)}
+                                      value={editingRowData.level_read !== undefined && editingRowData.level_read !== null ? parseFloat(((editingRowData.level_read / 100) * maxVol).toFixed(1)) : ''}
+                                      onChange={(e) => handleEditChange('level_read', (parseFloat(e.target.value) || 0) / maxVol * 100)}
                                       style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '55px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
@@ -6947,6 +7014,65 @@ function App() {
 
               </form>
             )}
+
+          </div>
+        </div>
+      )}
+
+      {/* Glassmorphic Edit Instrument Modal */}
+      {showEditMachineModal && (
+        <div className="modal-backdrop" onClick={() => setShowEditMachineModal(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+
+            {/* Modal Header */}
+            <div className="modal-header">
+              <h3>
+                <Cpu size={22} color="var(--accent-blue)" />
+                แก้ไขชื่อเครื่องมือ (Edit Instrument Name)
+              </h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowEditMachineModal(false)}
+                title="ปิด"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={submitEditMachine} className="modal-body" style={{ margin: 0 }}>
+
+              <div>
+                <label className="modal-label">🖥️ ชื่อเครื่องมือ / bioreactor *</label>
+                <input
+                  type="text"
+                  value={editingMachineName}
+                  onChange={(e) => setEditingMachineName(e.target.value)}
+                  placeholder="กรอกชื่อเครื่องมือ"
+                  className="modal-input"
+                  required
+                  style={{ width: '100%', padding: '10px' }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEditMachineModal(false)}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-blue"
+                >
+                  บันทึก
+                </button>
+              </div>
+
+            </form>
 
           </div>
         </div>

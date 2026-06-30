@@ -19,6 +19,19 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  if (req.body && Object.keys(req.body).length) {
+    // Avoid logging large file uploads/image uploads if any
+    const bodyLog = { ...req.body };
+    if (bodyLog.imageData) bodyLog.imageData = '[BASE64_IMAGE_DATA]';
+    console.log(`  Body:`, JSON.stringify(bodyLog));
+  }
+  next();
+});
+
+
 // Helper: normalize time to HH:MM (24-hour)
 const pad2 = (n) => String(n).padStart(2, '0');
 const normalizeTimeHHMM = (input) => {
@@ -129,6 +142,18 @@ if (SERVICE_ACCOUNT_JSON) {
   console.log('ℹ️  No FIREBASE_SERVICE_ACCOUNT_PATH/JSON found or file missing. Using local db.json file storage.');
   if (SERVICE_ACCOUNT_PATH) {
     console.log(`   Looked for: ${path.resolve(__dirname, SERVICE_ACCOUNT_PATH)}`);
+  }
+}
+
+// Verify Firestore connection and check for quota limits at startup
+if (isCloud) {
+  try {
+    await db.collection('machines').limit(1).get();
+    console.log('✅ Firestore connection and quota verified successfully.');
+  } catch (err) {
+    console.error('❌ Firestore connection test failed (possibly out of quota or offline). Falling back to local db.json. Error:', err.message);
+    isCloud = false;
+    db = null;
   }
 }
 
@@ -338,7 +363,9 @@ const getSettings = async () => {
         settings = doc.data();
       }
     } catch (e) {
-      console.error('Error reading settings from Firestore:', e);
+      console.error('Error reading settings from Firestore, falling back to local file:', e);
+      const localDB = readLocalDB();
+      settings = localDB.settings || {};
     }
   } else {
     const localDB = readLocalDB();
@@ -544,16 +571,14 @@ app.post('/api/settings/update-password', async (req, res) => {
 
 app.get('/api/settings', async (req, res) => {
   const settings = await getSettings();
-  const { adminPassword, ...publicSettings } = settings;
+  const publicSettings = { ...settings };
+  delete publicSettings.adminPassword;
   res.json(publicSettings);
 });
 
 app.post('/api/settings/update-about', async (req, res) => {
-  const { password, systemName, systemVersion, developer, techStack, supportEmail, supportPhone } = req.body;
+  const { systemName, systemVersion, developer, techStack, supportEmail, supportPhone } = req.body;
   const settings = await getSettings();
-  if (password !== settings.adminPassword) {
-    return res.status(400).json({ error: 'รหัสผ่านแอดมินยืนยันไม่ถูกต้อง' });
-  }
 
   settings.systemName = (systemName || '').trim();
   settings.systemVersion = (systemVersion || '').trim();
@@ -564,16 +589,14 @@ app.post('/api/settings/update-about', async (req, res) => {
 
   await saveSettings(settings);
   
-  const { adminPassword: _, ...publicSettings } = settings;
+  const publicSettings = { ...settings };
+  delete publicSettings.adminPassword;
   res.json({ success: true, settings: publicSettings });
 });
 
 app.post('/api/settings/update-vvm', async (req, res) => {
-  const { password, vvmCalcType, maxVolumeLiters, constantVolumeLiters, airUnit } = req.body;
+  const { vvmCalcType, maxVolumeLiters, constantVolumeLiters, airUnit } = req.body;
   const settings = await getSettings();
-  if (password !== settings.adminPassword) {
-    return res.status(400).json({ error: 'รหัสผ่านแอดมินยืนยันไม่ถูกต้อง' });
-  }
 
   settings.vvmCalcType = vvmCalcType || 'dynamic';
   settings.maxVolumeLiters = parseFloat(maxVolumeLiters) || 5.0;
@@ -582,7 +605,8 @@ app.post('/api/settings/update-vvm', async (req, res) => {
 
   await saveSettings(settings);
   
-  const { adminPassword: _, ...publicSettings } = settings;
+  const publicSettings = { ...settings };
+  delete publicSettings.adminPassword;
   res.json({ success: true, settings: publicSettings });
 });
 
