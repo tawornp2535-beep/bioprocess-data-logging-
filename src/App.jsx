@@ -516,28 +516,23 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
 
             {/* Rising Bubbles (Simulated Gas Sparger) */}
             {airBubbleCount > 0 && level_read > 0 && (
-              <g clipPath="url(#liquid-clip)">
+              <g>
                 {[...Array(airBubbleCount)].map((_, i) => {
-                  const cx = 105 + (i * 7) % 90;
-                  const cy = 338 + (i % 5);
-                  const rRadius = 0.8 + (i % 3) * 0.5;
-                  const duration = (0.8 + (i % 10) * 0.15) * (1 / (0.6 + Math.min(1.4, rawVvm * 0.5)));
-                  const delay = (i * 0.04).toFixed(2);
-                  const wobble = (4 + (i % 4) * 4) * (i % 2 === 0 ? 1 : -1);
-                  
+                  const rx = 80 + (i * 13) % 140;
+                  const ry = 340 - (i * 17) % (Math.max(20, (level_read / physicalMaxVolume) * 210));
+                  const rRadius = 1.5 + (i % 3);
                   return (
                     <circle
                       key={`bubble-${i}`}
-                      cx={cx}
-                      cy={cy}
+                      cx={rx}
+                      cy={ry}
                       r={rRadius}
                       fill="#ffffff"
-                      opacity="0.7"
+                      opacity="0.6"
+                      className="rising-bubble-element"
                       style={{
-                        animation: `bubble-rise ${duration}s infinite linear`,
-                        animationDelay: `${delay}s`,
-                        '--travel-dist': `-${travelDist}px`,
-                        '--wobble': `${wobble}px`
+                        animation: `bubble-rise ${1 + (i % 2)}s infinite ease-in-out`,
+                        animationDelay: `${i * 0.1}s`
                       }}
                     />
                   );
