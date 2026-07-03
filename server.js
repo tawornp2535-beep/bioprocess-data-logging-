@@ -785,6 +785,30 @@ app.put('/api/jobs/:id/expiry', async (req, res) => {
   res.json(await getDB());
 });
 
+app.put('/api/jobs/:id/history-permission', async (req, res) => {
+  const { id } = req.params;
+  const { allowHistoryView } = req.body;
+
+  if (isCloud) {
+    try {
+      await db.collection(JOBS_COL).doc(id).update({ allowHistoryView: !!allowHistoryView });
+    } catch (e) {
+      console.error('Firestore error updating history permission:', e);
+      return res.status(500).json({ error: 'Failed to update history permission' });
+    }
+  } else {
+    const localDB = readLocalDB();
+    const job = localDB.jobs.find(j => j.id === id);
+    if (job) {
+      job.allowHistoryView = !!allowHistoryView;
+      writeLocalDB(localDB);
+    }
+  }
+
+  res.json(await getDB());
+});
+
+
 app.put('/api/jobs/:id/status', async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;

@@ -1548,6 +1548,15 @@ function App() {
           return;
         }
 
+        const isExpired = targetJob.expiresAt && new Date() > new Date(targetJob.expiresAt);
+        const isFinished = targetJob.status === 'finished';
+        if ((isExpired || isFinished) && !targetJob.allowHistoryView) {
+          alert('สิทธิ์การเข้าใช้งานหมดอายุหรือเสร็จสิ้นแล้ว (หากต้องการดูย้อนหลัง กรุณาติดต่อเจ้าหน้าที่เพื่อขอเปิดสิทธิ์)');
+          setUserRole(null);
+          setActiveCustomerJobId(null);
+          return;
+        }
+
         // Apply fresh DB
         applyDBUpdate(data);
         if (data.activeUsers) {
@@ -1623,10 +1632,17 @@ function App() {
       if (!activeJob) {
         shouldLogout = true;
         reason = 'ไม่พบข้อมูลของรอบรันนี้ในระบบ หรือข้อมูลอาจถูกลบไปแล้ว';
+      } else {
+        const isExpired = activeJob.expiresAt && new Date() > new Date(activeJob.expiresAt);
+        const isFinished = activeJob.status === 'finished';
+        if ((isExpired || isFinished) && !activeJob.allowHistoryView) {
+          shouldLogout = true;
+          reason = `สิทธิ์การเข้าใช้งานสำหรับรอบรัน "${activeJob.name || activeCustomerJobId}" หมดอายุหรือเสร็จสิ้นแล้ว และไม่ได้รับอนุญาตให้ดูย้อนหลัง`;
+        }
       }
 
       if (shouldLogout) {
-        setSessionExpiredMessage(reason + ' กรุณาติดต่อเจ้าหน้าที่เพื่อขอลิงก์ใหม่');
+        setSessionExpiredMessage(reason + ' กรุณาติดต่อเจ้าหน้าที่เพื่อขออนุญาตหรือขอลิงก์ใหม่');
         setUserRole(null);
         setActiveCustomerJobId(null);
         setCurrentAppView('monitoring');
@@ -2982,6 +2998,13 @@ function App() {
                     const jobExists = data.jobs.find(j => j.id === jobCode);
                     if (!jobExists) {
                       alert('ไม่พบรหัสงานนี้ในระบบ กรุณาตรวจสอบรหัสอีกครั้ง');
+                      return;
+                    }
+
+                    const isExpired = jobExists.expiresAt && new Date() > new Date(jobExists.expiresAt);
+                    const isFinished = jobExists.status === 'finished';
+                    if ((isExpired || isFinished) && !jobExists.allowHistoryView) {
+                      alert('สิทธิ์การเข้าใช้งานหมดอายุหรือเสร็จสิ้นแล้ว (หากต้องการดูย้อนหลัง กรุณาติดต่อเจ้าหน้าที่เพื่อขอเปิดสิทธิ์)');
                       return;
                     }
                     try {
@@ -6413,6 +6436,54 @@ function App() {
 
                     <div style={{ fontSize: '0.85rem', marginTop: '10px' }}>
                       สถานะอายุลิงก์: <span style={{ color: isExpired ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 700 }}>{expiryStatusText}</span>
+                    </div>
+                  </div>
+
+                  {/* Allow Historical Viewing Toggle */}
+                  <div className="modal-section" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <label className="modal-label" style={{ marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          📂 อนุญาตให้เข้าดูย้อนหลัง (Historical View)
+                        </label>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          ให้ลูกค้าเข้าดูบอร์ดข้อมูลได้แบบอ่านอย่างเดียว หลังจากการรันเสร็จสิ้นหรือหมดอายุแชร์
+                        </div>
+                      </div>
+                      <label className="switch-container" style={{ display: 'inline-block', position: 'relative', width: '48px', height: '24px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={!!job.allowHistoryView}
+                          onChange={async (e) => {
+                            const val = e.target.checked;
+                            try {
+                              const res = await fetch(`/api/jobs/${job.id}/history-permission`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ allowHistoryView: val })
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                applyDBUpdate(data);
+                              }
+                            } catch (err) {
+                              console.error(err);
+                            }
+                          }}
+                          style={{ opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span className="switch-slider" style={{
+                          position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                          backgroundColor: job.allowHistoryView ? 'var(--accent-green)' : '#475569',
+                          transition: '0.3s', borderRadius: '24px',
+                          boxShadow: job.allowHistoryView ? '0 0 10px rgba(16, 185, 129, 0.4)' : 'none'
+                        }}>
+                          <span style={{
+                            position: 'absolute', content: '""', height: '18px', width: '18px', left: job.allowHistoryView ? '26px' : '4px', bottom: '3px',
+                            backgroundColor: 'white', transition: '0.3s', borderRadius: '50%'
+                          }} />
+                        </span>
+                      </label>
                     </div>
                   </div>
 
