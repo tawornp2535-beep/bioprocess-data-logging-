@@ -1548,22 +1548,6 @@ function App() {
           return;
         }
 
-        // Expiry check
-        if (targetJob.expiresAt && new Date() > new Date(targetJob.expiresAt)) {
-          alert('สิทธิ์การเข้าใช้งานเซสชันนี้หมดอายุแล้ว');
-          setUserRole(null);
-          setActiveCustomerJobId(null);
-          return;
-        }
-
-        // Status check
-        if (targetJob.status === 'finished') {
-          alert('รอบรันนี้ได้เสร็จสิ้นหรือหยุดการใช้งานแล้ว');
-          setUserRole(null);
-          setActiveCustomerJobId(null);
-          return;
-        }
-
         // Apply fresh DB
         applyDBUpdate(data);
         if (data.activeUsers) {
@@ -1639,12 +1623,6 @@ function App() {
       if (!activeJob) {
         shouldLogout = true;
         reason = 'ไม่พบข้อมูลของรอบรันนี้ในระบบ หรือข้อมูลอาจถูกลบไปแล้ว';
-      } else if (activeJob.expiresAt && new Date() > new Date(activeJob.expiresAt)) {
-        shouldLogout = true;
-        reason = `สิทธิ์การเข้าใช้งานสำหรับรอบรัน "${activeJob.name || activeCustomerJobId}" หมดอายุแล้ว`;
-      } else if (activeJob.status === 'finished') {
-        shouldLogout = true;
-        reason = `รอบรัน "${activeJob.name || activeCustomerJobId}" ได้เสร็จสิ้นหรือถูกระงับการใช้งานแล้ว`;
       }
 
       if (shouldLogout) {
@@ -1820,6 +1798,9 @@ function App() {
       const targetJob = jobs.find(j => j.id === activeCustomerJobId);
       if (targetJob && targetJob.machineId) {
         setCurrentMachineId(targetJob.machineId);
+        const isExpired = targetJob.expiresAt && new Date() > new Date(targetJob.expiresAt);
+        const isFinished = targetJob.status === 'finished';
+        setIsViewingHistory(isFinished || isExpired);
       }
     }
   }, [userRole, activeCustomerJobId, jobs]);
@@ -3001,14 +2982,6 @@ function App() {
                     const jobExists = data.jobs.find(j => j.id === jobCode);
                     if (!jobExists) {
                       alert('ไม่พบรหัสงานนี้ในระบบ กรุณาตรวจสอบรหัสอีกครั้ง');
-                      return;
-                    }
-                    if (jobExists.expiresAt && new Date() > new Date(jobExists.expiresAt)) {
-                      alert('สิทธิ์การเข้าใช้งานเซสชันนี้หมดอายุแล้ว');
-                      return;
-                    }
-                    if (jobExists.status === 'finished') {
-                      alert('รอบรันนี้ได้เสร็จสิ้นหรือหยุดการใช้งานแล้ว');
                       return;
                     }
                     try {
@@ -5097,6 +5070,12 @@ function App() {
         ) : (
           /* MONITORING VIEW */
           <>
+            {isViewingHistory && (
+              <div className="stopped-warning-banner" style={{ background: 'rgba(148, 163, 184, 0.1)', borderColor: 'rgba(148, 163, 184, 0.25)', color: '#94a3b8', marginBottom: '1rem', width: '100%' }}>
+                <span className="warning-icon">📁</span>
+                <span>ขณะนี้คุณกำลังดูข้อมูลย้อนหลังของรอบรันนี้ (Viewing historical data for this session)</span>
+              </div>
+            )}
             <header className="dashboard-header" style={{ flexWrap: 'wrap', gap: '1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
                 {/* Instrument and Session static labels (no dropdowns as requested) */}
@@ -5183,6 +5162,15 @@ function App() {
                     background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: '8px'
                   }}>
                     🏁 งานเสร็จสิ้นแล้ว
+                  </span>
+                )}
+                {currentJob && currentJob.expiresAt && new Date() > new Date(currentJob.expiresAt) && (
+                  <span style={{
+                    height: '38px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    fontSize: '0.82rem', fontWeight: 700, color: '#fca5a5',
+                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '8px'
+                  }}>
+                    ⏰ หมดอายุการแชร์แล้ว
                   </span>
                 )}
                 <button

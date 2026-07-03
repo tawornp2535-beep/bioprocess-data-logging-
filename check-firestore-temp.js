@@ -30,17 +30,21 @@ const db = getFirestore('default');
 
 async function checkJobs() {
   try {
-    const jobDoc = await db.collection('jobs').doc('job-1781621164112').get();
-    if (jobDoc.exists) {
-      const job = jobDoc.data();
-      if (job.data) {
-        job.data.forEach((dp, idx) => {
-          console.log(`[${idx}] timestamp: ${dp.timestamp}, date: ${dp.date}, time: ${dp.time}, remark: "${dp.remark}"`);
-        });
-      }
-    }
+    const machinesSnapshot = await db.collection('machines').get();
+    console.log('--- MACHINES IN FIRESTORE ---');
+    machinesSnapshot.forEach(doc => {
+      console.log(doc.id, '=>', doc.data().name);
+    });
+
+    const jobsSnapshot = await db.collection('jobs').get();
+    console.log('--- JOBS IN FIRESTORE ---');
+    jobsSnapshot.forEach(doc => {
+      const data = doc.data();
+      console.log(doc.id, '=> name:', data.name, 'machineId:', data.machineId, 'dataPoints:', data.data ? data.data.length : 0);
+    });
     process.exit(0);
   } catch (error) {
+    console.error(error);
     process.exit(1);
   }
 }
