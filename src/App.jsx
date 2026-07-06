@@ -2362,8 +2362,6 @@ function App() {
 
       const payload = {
         ...editingRowData,
-        level_set: typeof editingRowData.level_set === 'number' && !isNaN(editingRowData.level_set) ? (editingRowData.level_set / maxVol) * 100 : null,
-        level_read: typeof editingRowData.level_read === 'number' && !isNaN(editingRowData.level_read) ? (editingRowData.level_read / maxVol) * 100 : null,
         timestamp
       };
 
@@ -2717,9 +2715,12 @@ function App() {
       'Remarks'
     ];
     const csvRows = [headers.join(',')];
-    const isCurrent = job.id === currentJob?.id;
-    const mappedRows = mapDataPointsToLiters(job.data, job);
-    const rowsToExport = isCurrent && getSortedRows().length > 0 ? getSortedRows() : mappedRows;
+    const mappedRows = mapDataPointsToLiters(job.data, job).sort((a, b) => {
+      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return bTime - aTime;
+    });
+    const rowsToExport = mappedRows;
     rowsToExport.forEach(row => {
       const dateVal = row.timestamp ? toYYYYMMDD(row.timestamp) : (row.date || '');
       const timeVal = row.timestamp ? toHHMM(row.timestamp) : (row.time || '');
@@ -2792,9 +2793,12 @@ function App() {
       return;
     }
 
-    const isCurrent = job.id === currentJob?.id;
-    const mappedRows = mapDataPointsToLiters(job.data, job);
-    const rowsToExport = isCurrent && getSortedRows().length > 0 ? getSortedRows() : mappedRows;
+    const mappedRows = mapDataPointsToLiters(job.data, job).sort((a, b) => {
+      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return bTime - aTime;
+    });
+    const rowsToExport = mappedRows;
 
     const sheetData = rowsToExport.map(row => {
       const ai_s = row.air_set !== undefined ? row.air_set : row.air;
@@ -6016,8 +6020,8 @@ function App() {
                                     <input
                                       type="number"
                                       step="0.1"
-                                      value={typeof editingRowData.level_set === 'number' && !isNaN(editingRowData.level_set) ? parseFloat(editingRowData.level_set.toFixed(1)) : (editingRowData.level_set === 0 ? 0 : '')}
-                                      onChange={(e) => handleEditChange('level_set', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                      value={editingRowData.level_set !== undefined && editingRowData.level_set !== null ? parseFloat(((editingRowData.level_set / 100) * maxVol).toFixed(1)) : ''}
+                                      onChange={(e) => handleEditChange('level_set', (parseFloat(e.target.value) || 0) / maxVol * 100)}
                                       style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '55px', textAlign: 'center' }}
                                     />
                                   </td>
@@ -6025,8 +6029,8 @@ function App() {
                                     <input
                                       type="number"
                                       step="0.1"
-                                      value={typeof editingRowData.level_read === 'number' && !isNaN(editingRowData.level_read) ? parseFloat(editingRowData.level_read.toFixed(1)) : (editingRowData.level_read === 0 ? 0 : '')}
-                                      onChange={(e) => handleEditChange('level_read', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                      value={editingRowData.level_read !== undefined && editingRowData.level_read !== null ? parseFloat(((editingRowData.level_read / 100) * maxVol).toFixed(1)) : ''}
+                                      onChange={(e) => handleEditChange('level_read', (parseFloat(e.target.value) || 0) / maxVol * 100)}
                                       style={{ padding: '6px 2px', borderRadius: '4px', border: '1px solid var(--accent-green)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '55px', textAlign: 'center', fontWeight: 600 }}
                                     />
                                   </td>
@@ -6144,8 +6148,8 @@ function App() {
                               )}
                               {visibleParameters.level && (
                                 <>
-                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? row.level_set.toFixed(1) : '-'}</td>
-                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? row.level_read.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? calcVolumeLiters(row.level_set) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? calcVolumeLiters(row.level_read) : '-'}</td>
                                 </>
                               )}
                               {visibleParameters.air_out && (
