@@ -6148,8 +6148,8 @@ function App() {
                               )}
                               {visibleParameters.level && (
                                 <>
-                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? calcVolumeLiters(row.level_set) : '-'}</td>
-                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? calcVolumeLiters(row.level_read) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{typeof row.level_set === 'number' ? row.level_set.toFixed(1) : '-'}</td>
+                                  <td style={{ textAlign: 'center', color: 'var(--accent-green)', fontWeight: 600 }}>{typeof row.level_read === 'number' ? row.level_read.toFixed(1) : '-'}</td>
                                 </>
                               )}
                               {visibleParameters.air_out && (
