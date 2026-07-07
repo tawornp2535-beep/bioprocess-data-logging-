@@ -585,6 +585,66 @@ app.get('/api/settings', async (req, res) => {
   res.json(publicSettings);
 });
 
+let isStorageCloudAvailable = true;
+
+app.get('/api/storage-info', async (req, res) => {
+  const limitBytes = 5 * 1024 * 1024 * 1024; // 5 GB default Firebase Storage free limit
+  let usedBytes = 0;
+
+  if (isCloud && isStorageCloudAvailable) {
+    try {
+      const bucket = getStorage().bucket();
+      const [files] = await bucket.getFiles();
+      for (const file of files) {
+        usedBytes += parseInt(file.metadata.size || 0, 10);
+      }
+      return res.json({
+        isCloud: true,
+        usedBytes,
+        limitBytes,
+        remainingBytes: Math.max(0, limitBytes - usedBytes)
+      });
+    } catch (err) {
+      console.error('❌ Error getting Firebase Storage size, falling back to local storage:', err.message);
+      if (err.code === 404 || err.message.includes('does not exist') || err.message.includes('notFound')) {
+        console.log('ℹ️ Firebase Storage bucket not found/configured. Bypassing cloud storage for subsequent checks.');
+        isStorageCloudAvailable = false;
+      }
+    }
+  }
+
+  // Fallback or Local Storage calculation
+  try {
+    const getDirSize = (dirPath) => {
+      let totalSize = 0;
+      if (fs.existsSync(dirPath)) {
+        const files = fs.readdirSync(dirPath);
+        for (const file of files) {
+          const filePath = path.join(dirPath, file);
+          const stats = fs.statSync(filePath);
+          if (stats.isFile()) {
+            totalSize += stats.size;
+          } else if (stats.isDirectory()) {
+            totalSize += getDirSize(filePath);
+          }
+        }
+      }
+      return totalSize;
+    };
+
+    usedBytes = getDirSize(UPLOADS_DIR);
+    return res.json({
+      isCloud: false,
+      usedBytes,
+      limitBytes,
+      remainingBytes: Math.max(0, limitBytes - usedBytes)
+    });
+  } catch (err) {
+    console.error('Error getting local storage size:', err);
+    return res.status(500).json({ error: 'Failed to retrieve storage information' });
+  }
+});
+
 app.post('/api/settings/update-about', async (req, res) => {
   const { systemName, systemVersion, developer, techStack, supportEmail, supportPhone } = req.body;
   const settings = await getSettings();

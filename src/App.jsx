@@ -1454,6 +1454,32 @@ function App() {
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState(null);
+  const [storageInfo, setStorageInfo] = useState(null);
+  const [isLoadingStorage, setIsLoadingStorage] = useState(false);
+
+  const formatBytes = (bytes, decimals = 2) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  const fetchStorageInfo = async () => {
+    setIsLoadingStorage(true);
+    try {
+      const res = await fetch('/api/storage-info');
+      if (res.ok) {
+        const data = await res.json();
+        setStorageInfo(data);
+      }
+    } catch (err) {
+      console.error('Error fetching storage info:', err);
+    } finally {
+      setIsLoadingStorage(false);
+    }
+  };
 
   const [visibleParameters, setVisibleParameters] = useState({
     temp: true,
@@ -1835,6 +1861,12 @@ function App() {
     date: toYYYYMMDD(new Date()),
     time: toHHMM(new Date())
   } : lastDataPoint;
+
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      fetchStorageInfo();
+    }
+  }, [activeTab]);
 
   // Enforce customer constraints: lock into active customer job and machine
   useEffect(() => {
@@ -4671,6 +4703,83 @@ function App() {
                     </button>
                   )}
                 </form>
+              </div>
+
+              {/* Storage Space Panel */}
+              <div className="glass-panel" style={{ padding: '2rem' }}>
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-yellow)' }}>
+                  ☁️ พื้นที่จัดเก็บข้อมูล (System Storage)
+                </h3>
+                
+                {isLoadingStorage ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', gap: '1rem' }}>
+                    <RotateCw size={24} style={{ animation: 'spin-blade 1s linear infinite', color: 'var(--accent-yellow)' }} />
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>กำลังโหลดข้อมูลพื้นที่จัดเก็บ...</span>
+                  </div>
+                ) : storageInfo ? (() => {
+                  const used = storageInfo.usedBytes || 0;
+                  const limit = storageInfo.limitBytes || (5 * 1024 * 1024 * 1024);
+                  const percent = Math.min(100, Math.max(0, (used / limit) * 100));
+                  const isCloud = storageInfo.isCloud;
+                  
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-primary)' }}>
+                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ประเภทพื้นที่จัดเก็บ:</span>
+                        <span style={{ fontWeight: 700, color: isCloud ? 'var(--accent-blue)' : 'var(--accent-green)' }}>
+                          {isCloud ? '☁️ Firebase Cloud Storage' : '💾 Local Server Disk'}
+                        </span>
+                      </div>
+                      
+                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>พื้นที่ใช้ไป (Used):</span>
+                        <span style={{ fontWeight: 700 }}>{formatBytes(used)}</span>
+                      </div>
+                      
+                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>พื้นที่คงเหลือ (Remaining):</span>
+                        <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatBytes(storageInfo.remainingBytes)}</span>
+                      </div>
+
+                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>โควต้าทั้งหมด (Quota):</span>
+                        <span style={{ fontWeight: 700 }}>{formatBytes(limit)}</span>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                          <span>การใช้งาน (Usage)</span>
+                          <span>{percent.toFixed(2)}%</span>
+                        </div>
+                        <div style={{ height: '8px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div 
+                            style={{ 
+                              height: '100%', 
+                              width: `${percent}%`, 
+                              background: percent > 90 ? 'linear-gradient(90deg, #ef4444, #b91c1c)' : (percent > 70 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 'linear-gradient(90deg, #0ea5e9, #10b981)'),
+                              borderRadius: '4px',
+                              transition: 'width 0.5s ease-out'
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={fetchStorageInfo}
+                        className="btn btn-secondary"
+                        style={{ width: '100%', margin: 0, marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <RotateCw size={14} /> อัปเดตข้อมูลพื้นที่จัดเก็บ (Refresh Storage Info)
+                      </button>
+                    </div>
+                  );
+                })() : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', gap: '0.5rem' }}>
+                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ไม่สามารถดึงข้อมูลพื้นที่จัดเก็บได้</span>
+                    <button onClick={fetchStorageInfo} className="btn btn-primary" style={{ margin: 0 }}>ลองอีกครั้ง</button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
