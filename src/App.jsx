@@ -63,6 +63,50 @@ const compressImage = (file, maxWidth = 400, maxHeight = 400, quality = 0.75) =>
   });
 };
 
+const SafeThumbnail = ({ src, onClick }) => {
+  const [error, setError] = React.useState(false);
+  
+  React.useEffect(() => {
+    setError(false);
+  }, [src]);
+  
+  if (error) {
+    return (
+      <div 
+        onClick={onClick}
+        title="รูปภาพเก่าสูญหาย (คลิกดูรายละเอียด)"
+        style={{ 
+          width: '28px', 
+          height: '28px', 
+          borderRadius: '4px', 
+          background: 'rgba(239, 68, 68, 0.1)', 
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          cursor: 'pointer',
+          color: '#ef4444',
+          fontSize: '0.8rem',
+          fontWeight: 'bold'
+        }}
+      >
+        ⚠️
+      </div>
+    );
+  }
+  
+  return (
+    <img
+      src={src}
+      alt="attachment"
+      onError={() => setError(true)}
+      style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
+      onClick={onClick}
+      title="คลิกเพื่อดูรูปภาพขนาดเต็ม"
+    />
+  );
+};
+
 const getElapsedHours = (job, dataPointTimestamp) => {
   if (!job || !dataPointTimestamp) return 0;
 
@@ -1454,6 +1498,7 @@ function App() {
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const [storageInfo, setStorageInfo] = useState(null);
   const [isLoadingStorage, setIsLoadingStorage] = useState(false);
 
@@ -6445,12 +6490,12 @@ function App() {
                               <td className="remarks-cell" style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   {row.imageUrl && (
-                                    <img
+                                    <SafeThumbnail
                                       src={row.imageUrl}
-                                      alt="attachment"
-                                      style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
-                                      onClick={() => setSelectedImageUrl(row.imageUrl)}
-                                      title="คลิกเพื่อดูรูปภาพขนาดเต็ม"
+                                      onClick={() => {
+                                        setSelectedImageUrl(row.imageUrl);
+                                        setImageLoadError(false);
+                                      }}
                                     />
                                   )}
                                   <span>{row.remark || '-'}</span>
@@ -7581,37 +7626,77 @@ function App() {
           onClick={() => setSelectedImageUrl(null)}
         >
           <div style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }}>
-            <img 
-              src={selectedImageUrl} 
-              alt="expanded view" 
-              style={{
-                maxWidth: '100%',
-                maxHeight: '90vh',
-                borderRadius: '8px',
-                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }} 
-            />
-            <button
-              onClick={() => setSelectedImageUrl(null)}
-              style={{
-                position: 'absolute',
-                top: '-40px',
-                right: '0px',
-                background: 'rgba(30,41,59,0.8)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <X size={18} />
-            </button>
+            {imageLoadError ? (
+              <div 
+                className="glass-panel" 
+                style={{ 
+                  padding: '2rem', 
+                  maxWidth: '450px', 
+                  textAlign: 'center', 
+                  background: 'rgba(30, 41, 59, 0.95)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: 'white',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px',
+                  cursor: 'default'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ fontSize: '2.5rem', color: '#ef4444' }}>⚠️</div>
+                <h3 style={{ margin: 0, color: '#ef4444' }}>รูปภาพเก่าสูญหาย (Image Lost)</h3>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.5' }}>
+                  รูปภาพนี้ถูกบันทึกไว้ในหน่วยความจำชั่วคราวของเซิร์ฟเวอร์ (ก่อนการเปิดใช้งานคลาวด์ Firebase Storage) และไฟล์จริงบนเครื่องเซิร์ฟเวอร์ได้สูญหายไปแล้วหลังระบบรีสตาร์ทครับ
+                </p>
+                <div style={{ marginTop: '8px', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '6px', fontFamily: 'monospace', width: '100%', wordBreak: 'break-all' }}>
+                  Path: {selectedImageUrl}
+                </div>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ margin: '8px 0 0 0', width: '100%' }}
+                  onClick={() => setSelectedImageUrl(null)}
+                >
+                  ปิดหน้าต่าง (Close)
+                </button>
+              </div>
+            ) : (
+              <>
+                <img 
+                  src={selectedImageUrl} 
+                  alt="expanded view" 
+                  onError={() => setImageLoadError(true)}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '90vh',
+                    borderRadius: '8px',
+                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }} 
+                />
+                <button
+                  onClick={() => setSelectedImageUrl(null)}
+                  style={{
+                    position: 'absolute',
+                    top: '-40px',
+                    right: '0px',
+                    background: 'rgba(30,41,59,0.8)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
