@@ -1316,6 +1316,7 @@ function App() {
 
 
   const [activeTab, setActiveTab] = useState('diagram'); // 'diagram' | 'dashboard' | 'combined' | 'table' | 'ai'
+  const [settingsTab, setSettingsTab] = useState('business'); // 'business' | 'firebase' | 'ai' | 'password' | 'about'
   // AI Assistant States
   const [aiReport, setAiReport] = useState('');
   const [isAiReportLoading, setIsAiReportLoading] = useState(false);
@@ -4383,488 +4384,444 @@ function App() {
             )}
           </div>
         ) : currentAppView === 'settings' ? (
-          /* SYSTEM SETTINGS VIEW */
+          /* SYSTEM SETTINGS VIEW - TABBED */
           <div className="settings-view">
-            <header className="dashboard-header">
-              <h2>System Settings (การตั้งค่าระบบ)</h2>
+            {/* Settings Page Header */}
+            <header className="dashboard-header" style={{ marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.6rem' }}>⚙️ ตั้งค่าระบบ</h2>
+                <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.88rem' }}>System Settings — จัดการการตั้งค่าทั้งหมดของระบบ</p>
+              </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Settings size={20} color="var(--accent-blue)" /> ตั้งค่ารหัสผ่านผู้ดูแลระบบ (Change Admin Password)
-                </h3>
+            {/* Settings Tab Navigation */}
+            <div className="settings-tab-nav">
+              {[
+                { id: 'business', icon: '🏢', label: '1. ข้อมูลบริษัท' },
+                { id: 'firebase', icon: '☁️', label: '2. เชื่อมต่อคลาวด์ (Firebase)' },
+                { id: 'ai',       icon: '🤖', label: '3. ปัญญาประดิษฐ์ (Gemini AI)' },
+                { id: 'password', icon: '🔒', label: '4. รหัสผ่าน & แอดมิน' },
+                { id: 'about',    icon: 'ℹ️', label: '5. เกี่ยวกับระบบ' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  className={`settings-tab-btn ${settingsTab === tab.id ? 'active' : ''}`}
+                  onClick={() => setSettingsTab(tab.id)}
+                >
+                  <span className="settings-tab-icon">{tab.icon}</span>
+                  <span className="settings-tab-label">{tab.label}</span>
+                </button>
+              ))}
+            </div>
 
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  const currentPassword = e.target.currentPassword.value;
-                  const newPassword = e.target.newPassword.value;
-                  const confirmPassword = e.target.confirmPassword.value;
+            {/* Settings Tab Content */}
+            <div className="settings-tab-content">
 
-                  if (!currentPassword || !newPassword || !confirmPassword) {
-                    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-                    return;
-                  }
-
-                  if (newPassword !== confirmPassword) {
-                    alert('รหัสผ่านใหม่และยืนยันรหัสผ่านใหม่ไม่ตรงกัน');
-                    return;
-                  }
-
-                  try {
-                    const res = await fetch('/api/settings/update-password', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ currentPassword, newPassword })
-                    });
-                    const result = await res.json();
-                    if (res.ok) {
-                      alert('เปลี่ยนรหัสผ่านสำเร็จเรียบร้อยแล้ว');
-                      e.target.reset();
-                    } else {
-                      alert(`ผิดพลาด: ${result.error}`);
-                    }
-                  } catch (err) {
-                    console.error('Error changing password:', err);
-                    alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อเปลี่ยนรหัสผ่านได้');
-                  }
-                }} className="data-form" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-                  <div className="form-group" style={{ width: '100%' }}>
-                    <label>รหัสผ่านปัจจุบัน (Current Password)</label>
-                    <input
-                      type="password"
-                      name="currentPassword"
-                      placeholder="ป้อนรหัสผ่านปัจจุบัน"
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ width: '100%' }}>
-                    <label>รหัสผ่านใหม่ (New Password)</label>
-                    <input
-                      type="password"
-                      name="newPassword"
-                      placeholder="ป้อนรหัสผ่านใหม่"
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ width: '100%' }}>
-                    <label>ยืนยันรหัสผ่านใหม่ (Confirm New Password)</label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      placeholder="ป้อนยืนยันรหัสผ่านใหม่"
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                    />
-                  </div>
-
-                  <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: 0, marginTop: '0.5rem' }}>
-                    บันทึกการตั้งค่า (Update Password)
-                  </button>
-                </form>
-              </div>
-
-              {/* Developer & Version Information Panel */}
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-green)' }}>
-                  ⚙️ เกี่ยวกับผู้พัฒนา & ระบบ (About System)
-                </h3>
-
-                {!isEditingAbout ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-primary)' }}>
-                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ชื่อระบบ:</span>
-                      <span style={{ fontWeight: 700 }}>{aboutSystem.systemName}</span>
-                    </div>
-                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เวอร์ชันปัจจุบัน:</span>
-                      <span style={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{aboutSystem.systemVersion}</span>
-                    </div>
-                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ผู้พัฒนาระบบ:</span>
-                      <span style={{ fontWeight: 700 }}>{aboutSystem.developer}</span>
-                    </div>
-                    <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>เทคโนโลยีหลัก:</span>
-                      <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{aboutSystem.techStack}</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>รายละเอียดติดต่อ / สนับสนุนเทคนิค:</span>
-                      <span style={{ fontSize: '0.85rem' }}>📧 {aboutSystem.supportEmail}</span>
-                      <span style={{ fontSize: '0.85rem' }}>📞 {aboutSystem.supportPhone}</span>
+              {/* === TAB 1: BUSINESS INFO === */}
+              {settingsTab === 'business' && (
+                <div className="settings-panel-grid">
+                  <div className="glass-panel settings-card">
+                    <div className="settings-card-header">
+                      <span className="settings-card-icon" style={{ background: 'rgba(16,185,129,0.15)', color: 'var(--accent-green)' }}>🏢</span>
+                      <div>
+                        <h3>ข้อมูลบริษัทและระบบ</h3>
+                        <p>แก้ไขชื่อระบบ ผู้พัฒนา และข้อมูลติดต่อ</p>
+                      </div>
                     </div>
 
-                    {userRole === 'admin' && (
-                      <button
-                        onClick={() => setIsEditingAbout(true)}
-                        className="btn btn-secondary"
-                        style={{ width: '100%', margin: 0, marginTop: '1rem' }}
-                      >
-                        ✏️ แก้ไขข้อมูลผู้พัฒนา & ระบบ
-                      </button>
+                    {!isEditingAbout ? (
+                      <div className="settings-info-list">
+                        <div className="settings-info-row">
+                          <span className="info-label">ชื่อระบบ</span>
+                          <span className="info-value">{aboutSystem.systemName}</span>
+                        </div>
+                        <div className="settings-info-row">
+                          <span className="info-label">เวอร์ชัน</span>
+                          <span className="info-value" style={{ color: 'var(--accent-blue)' }}>{aboutSystem.systemVersion}</span>
+                        </div>
+                        <div className="settings-info-row">
+                          <span className="info-label">ผู้พัฒนา</span>
+                          <span className="info-value">{aboutSystem.developer}</span>
+                        </div>
+                        <div className="settings-info-row">
+                          <span className="info-label">เทคโนโลยีหลัก</span>
+                          <span className="info-value" style={{ fontSize: '0.82rem' }}>{aboutSystem.techStack}</span>
+                        </div>
+                        <div className="settings-info-row">
+                          <span className="info-label">อีเมลสนับสนุน</span>
+                          <span className="info-value">📧 {aboutSystem.supportEmail}</span>
+                        </div>
+                        <div className="settings-info-row">
+                          <span className="info-label">เบอร์โทรศัพท์</span>
+                          <span className="info-value">📞 {aboutSystem.supportPhone}</span>
+                        </div>
+                        {userRole === 'admin' && (
+                          <button onClick={() => setIsEditingAbout(true)} className="btn btn-secondary" style={{ width: '100%', margin: '1rem 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            ✏️ แก้ไขข้อมูล
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        const systemName = e.target.systemName.value;
+                        const systemVersion = e.target.systemVersion.value;
+                        const developer = e.target.developer.value;
+                        const techStack = e.target.techStack.value;
+                        const supportEmail = e.target.supportEmail.value;
+                        const supportPhone = e.target.supportPhone.value;
+                        try {
+                          const res = await fetch('/api/settings/update-about', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ systemName, systemVersion, developer, techStack, supportEmail, supportPhone })
+                          });
+                          const result = await res.json();
+                          if (res.ok) {
+                            alert('อัปเดตข้อมูลสำเร็จ');
+                            setAboutSystem(result.settings);
+                            setIsEditingAbout(false);
+                          } else {
+                            alert(`ผิดพลาด: ${result.error}`);
+                          }
+                        } catch (err) {
+                          alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+                        }
+                      }} className="settings-form">
+                        <div className="settings-form-group">
+                          <label>ชื่อระบบ (System Name)</label>
+                          <input type="text" name="systemName" defaultValue={aboutSystem.systemName} required />
+                        </div>
+                        <div className="settings-form-group">
+                          <label>เวอร์ชัน (System Version)</label>
+                          <input type="text" name="systemVersion" defaultValue={aboutSystem.systemVersion} required />
+                        </div>
+                        <div className="settings-form-group">
+                          <label>ผู้พัฒนาระบบ (Developer Team)</label>
+                          <input type="text" name="developer" defaultValue={aboutSystem.developer} required />
+                        </div>
+                        <div className="settings-form-group">
+                          <label>เทคโนโลยีหลัก (Core Tech Stack)</label>
+                          <input type="text" name="techStack" defaultValue={aboutSystem.techStack} required />
+                        </div>
+                        <div className="settings-form-group">
+                          <label>อีเมลสนับสนุน (Support Email)</label>
+                          <input type="email" name="supportEmail" defaultValue={aboutSystem.supportEmail} required />
+                        </div>
+                        <div className="settings-form-group">
+                          <label>เบอร์โทรศัพท์ (Support Phone)</label>
+                          <input type="text" name="supportPhone" defaultValue={aboutSystem.supportPhone} required />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                          <button type="button" onClick={() => setIsEditingAbout(false)} className="btn btn-secondary" style={{ flex: 1, margin: 0 }}>ยกเลิก</button>
+                          <button type="submit" className="btn btn-primary" style={{ flex: 2, margin: 0 }}>💾 บันทึกข้อมูล</button>
+                        </div>
+                      </form>
                     )}
                   </div>
-                ) : (
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    const systemName = e.target.systemName.value;
-                    const systemVersion = e.target.systemVersion.value;
-                    const developer = e.target.developer.value;
-                    const techStack = e.target.techStack.value;
-                    const supportEmail = e.target.supportEmail.value;
-                    const supportPhone = e.target.supportPhone.value;
+                </div>
+              )}
 
-                    try {
-                      const res = await fetch('/api/settings/update-about', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          systemName,
-                          systemVersion,
-                          developer,
-                          techStack,
-                          supportEmail,
-                          supportPhone
-                        })
-                      });
-                      const result = await res.json();
-                      if (res.ok) {
-                        alert('อัปเดตข้อมูลผู้พัฒนาและระบบสำเร็จเรียบร้อยแล้ว');
-                        setAboutSystem(result.settings);
-                        setIsEditingAbout(false);
-                      } else {
-                        alert(`ผิดพลาด: ${result.error}`);
-                      }
-                    } catch (err) {
-                      console.error('Error updating developer settings:', err);
-                      alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อบันทึกข้อมูลได้');
-                    }
-                  }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label style={{ fontSize: '0.78rem' }}>ชื่อระบบ (System Name)</label>
-                      <input
-                        type="text"
-                        name="systemName"
-                        defaultValue={aboutSystem.systemName}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label style={{ fontSize: '0.78rem' }}>เวอร์ชันปัจจุบัน (System Version)</label>
-                      <input
-                        type="text"
-                        name="systemVersion"
-                        defaultValue={aboutSystem.systemVersion}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label style={{ fontSize: '0.78rem' }}>ผู้พัฒนาระบบ (Developer Team)</label>
-                      <input
-                        type="text"
-                        name="developer"
-                        defaultValue={aboutSystem.developer}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label style={{ fontSize: '0.78rem' }}>เทคโนโลยีหลัก (Core Tech)</label>
-                      <input
-                        type="text"
-                        name="techStack"
-                        defaultValue={aboutSystem.techStack}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label style={{ fontSize: '0.78rem' }}>อีเมลสนับสนุน (Support Email)</label>
-                      <input
-                        type="email"
-                        name="supportEmail"
-                        defaultValue={aboutSystem.supportEmail}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label style={{ fontSize: '0.78rem' }}>เบอร์โทรศัพท์ (Support Phone)</label>
-                      <input
-                        type="text"
-                        name="supportPhone"
-                        defaultValue={aboutSystem.supportPhone}
-                        style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingAbout(false)}
-                        className="btn btn-secondary"
-                        style={{ flex: 1, margin: 0 }}
-                      >
-                        ยกเลิก
-                      </button>
-                      <button
-                        type="submit"
-                        className="btn btn-blue"
-                        style={{ flex: 1, margin: 0 }}
-                      >
-                        💾 บันทึกข้อมูล
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-
-              {/* VVM Calculation Settings Panel */}
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-blue)' }}>
-                  💨 ตั้งค่าการคำนวณ VVM (VVM Calculation)
-                </h3>
-
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  const vvmCalcType = e.target.vvmCalcType.value;
-                  const maxVolumeLiters = e.target.maxVolumeLiters ? e.target.maxVolumeLiters.value : aboutSystem.maxVolumeLiters;
-                  const constantVolumeLiters = e.target.constantVolumeLiters ? e.target.constantVolumeLiters.value : aboutSystem.constantVolumeLiters;
-                  const airUnit = e.target.airUnit.value;
-
-                  try {
-                    const res = await fetch('/api/settings/update-vvm', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        vvmCalcType,
-                        maxVolumeLiters,
-                        constantVolumeLiters,
-                        airUnit
-                      })
-                    });
-                    const result = await res.json();
-                    if (res.ok) {
-                      alert('บันทึกการตั้งค่า VVM สำเร็จเรียบร้อยแล้ว');
-                      setAboutSystem(result.settings);
-                    } else {
-                      alert(`ผิดพลาด: ${result.error}`);
-                    }
-                  } catch (err) {
-                    console.error('Error saving VVM settings:', err);
-                    alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อบันทึกข้อมูลได้');
-                  }
-                }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
-                  <div className="form-group" style={{ width: '100%' }}>
-                    <label>หน่วยของอัตราไหลลมในฐานข้อมูล (Air Flow Input Unit)</label>
-                    <select
-                      name="airUnit"
-                      value={aboutSystem.airUnit || 'mlmin'}
-                      onChange={(e) => {
-                        setAboutSystem(prev => ({ ...prev, airUnit: e.target.value }));
-                      }}
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                    >
-                      <option value="mlmin">mL/min (มิลลิลิตร/นาที) - เช่น ป้อน 400 = 0.4 ลิตร/นาที</option>
-                      <option value="lmin">L/min หรือ SLPM (ลิตร/นาที) - เช่น ป้อน 4.0 = 4.0 ลิตร/นาที</option>
-                    </select>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      หากเลือก mL/min ระบบจะหาร 1000 ให้อัตโนมัติเพื่อใช้เป็นลิตร/นาทีในสูตรคำนวณ VVM
-                    </span>
-                  </div>
-
-                  <div className="form-group" style={{ width: '100%' }}>
-                    <label>วิธีการคำนวณปริมาตรน้ำหมัก (Fermentation Volume Method)</label>
-                    <select
-                      name="vvmCalcType"
-                      value={aboutSystem.vvmCalcType || 'dynamic'}
-                      onChange={(e) => {
-                        setAboutSystem(prev => ({ ...prev, vvmCalcType: e.target.value }));
-                      }}
-                      style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                    >
-                      <option value="dynamic">คำนวณตามระดับน้ำจริงในถัง (Dynamic Level %)</option>
-                      <option value="constant">คิดเป็นค่าคงที่ (Constant Volume)</option>
-                    </select>
-                  </div>
-
-                  {(aboutSystem.vvmCalcType || 'dynamic') === 'dynamic' ? (
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label>ปริมาตรของน้ำหมักสูงสุดที่ระดับ 100% (ลิตร)</label>
-                      <input
-                        type="number"
-                        name="maxVolumeLiters"
-                        step="0.1"
-                        min="0.1"
-                        value={aboutSystem.maxVolumeLiters !== undefined && aboutSystem.maxVolumeLiters !== null ? aboutSystem.maxVolumeLiters : ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAboutSystem(prev => ({ ...prev, maxVolumeLiters: val }));
-                        }}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                        สูตร: SLPM ÷ ((Level % ÷ 100) × ปริมาตรสูงสุด)
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="form-group" style={{ width: '100%' }}>
-                      <label>ปริมาตรน้ำหมักคงที่ (Constant Volume in Liters)</label>
-                      <input
-                        type="number"
-                        name="constantVolumeLiters"
-                        step="0.1"
-                        min="0.1"
-                        value={aboutSystem.constantVolumeLiters !== undefined && aboutSystem.constantVolumeLiters !== null ? aboutSystem.constantVolumeLiters : ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAboutSystem(prev => ({ ...prev, constantVolumeLiters: val }));
-                        }}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', width: '100%' }}
-                        required
-                      />
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                        สูตร: SLPM ÷ ปริมาตรน้ำหมักคงที่
-                      </span>
-                    </div>
-                  )}
-
-                  {userRole === 'admin' && (
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: 0, marginTop: '0.5rem' }}>
-                      💾 บันทึกการตั้งค่า VVM
-                    </button>
-                  )}
-                </form>
-              </div>
-
-              {/* Storage Space Panel */}
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-yellow)' }}>
-                  ☁️ พื้นที่จัดเก็บระบบ Firebase (Firebase Storage & DB)
-                </h3>
-                
-                {isLoadingStorage ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', gap: '1rem' }}>
-                    <RotateCw size={24} style={{ animation: 'spin-blade 1s linear infinite', color: 'var(--accent-yellow)' }} />
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>กำลังโหลดข้อมูลพื้นที่จัดเก็บ...</span>
-                  </div>
-                ) : (storageInfo && storageInfo.storage && storageInfo.categories) ? (() => {
-                  const limit = storageInfo.storage.freeLimitBytes || (5 * 1024 * 1024 * 1024);
-                  const totalUsed = storageInfo.totalUsed || 0;
-                  const totalPercent = Math.min(100, Math.max(0, (totalUsed / limit) * 100));
-                  const isBlazePlan = storageInfo.isCloud;
-
-                  const getIconComponent = (iconName) => {
-                    switch (iconName) {
-                      case 'Camera': return <Camera size={18} style={{ color: 'var(--accent-blue)' }} />;
-                      case 'Cpu': return <Cpu size={18} style={{ color: 'var(--accent-green)' }} />;
-                      case 'Activity': return <ActivityIcon size={18} style={{ color: 'var(--accent-purple)' }} />;
-                      case 'Folder': return <Folder size={18} style={{ color: 'var(--accent-yellow)' }} />;
-                      case 'Settings': return <Settings size={18} style={{ color: 'var(--text-secondary)' }} />;
-                      default: return <Database size={18} style={{ color: 'var(--text-primary)' }} />;
-                    }
-                  };
-                  
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: 'var(--text-primary)' }}>
-                      
-                      {/* Top Windows-style overall storage bar */}
-                      <div style={{ marginBottom: '0.5rem' }}>
-                        <div style={{ height: '14px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '7px', overflow: 'hidden', position: 'relative' }}>
-                          <div 
-                            style={{ 
-                              height: '100%', 
-                              width: `${totalPercent}%`, 
-                              background: '#fbbf24', // Windows yellow bar
-                              borderRadius: '7px',
-                              transition: 'width 0.5s ease-out'
-                            }}
-                          ></div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginTop: '8px', fontWeight: 600 }}>
-                          <span style={{ color: '#fbbf24' }}>{formatBytes(totalUsed)} used</span>
-                          <span style={{ color: 'var(--text-secondary)' }}>{formatBytes(Math.max(0, limit - totalUsed))} free</span>
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                          นี่คือรายละเอียดการใช้งานพื้นที่จัดเก็บข้อมูลและประวัติระบบของคุณ
-                        </div>
+              {/* === TAB 2: FIREBASE CLOUD === */}
+              {settingsTab === 'firebase' && (
+                <div className="settings-panel-grid">
+                  <div className="glass-panel settings-card">
+                    <div className="settings-card-header">
+                      <span className="settings-card-icon" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>☁️</span>
+                      <div>
+                        <h3>Firebase Cloud Storage</h3>
+                        <p>ตรวจสอบพื้นที่จัดเก็บและการเชื่อมต่อระบบคลาวด์</p>
                       </div>
+                    </div>
 
-                      {/* Categories breakdown list (Windows style) */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        {storageInfo.categories.map((cat, idx) => {
-                          const catPercent = totalUsed > 0 ? Math.min(100, (cat.size / totalUsed) * 100) : 0;
-                          return (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                              {/* Icon Container */}
-                              <div style={{ padding: '8px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
-                                {getIconComponent(cat.icon)}
-                              </div>
-                              
-                              {/* Title, progress bar, desc */}
-                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', fontWeight: 600 }}>
-                                  <span>{cat.name}</span>
-                                  <span>{formatBytes(cat.size)}</span>
-                                </div>
-                                
-                                {/* Sleek Windows-style category progress bar */}
-                                <div style={{ height: '5px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '3px', width: '100%', overflow: 'hidden' }}>
-                                  <div 
-                                    style={{ 
-                                      height: '100%', 
-                                      width: `${catPercent}%`, 
-                                      background: '#3b82f6', // Windows blue color
-                                      borderRadius: '3px',
-                                      transition: 'width 0.5s ease-out'
-                                    }}
-                                  ></div>
-                                </div>
-                                
-                                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                                  {cat.description}
-                                </div>
-                              </div>
+                    {isLoadingStorage ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem', gap: '1rem' }}>
+                        <RotateCw size={28} style={{ animation: 'spin-blade 1s linear infinite', color: '#fbbf24' }} />
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>กำลังโหลดข้อมูลพื้นที่จัดเก็บ...</span>
+                      </div>
+                    ) : (storageInfo && storageInfo.storage && storageInfo.categories) ? (() => {
+                      const limit = storageInfo.storage.freeLimitBytes || (5 * 1024 * 1024 * 1024);
+                      const totalUsed = storageInfo.totalUsed || 0;
+                      const totalPercent = Math.min(100, Math.max(0, (totalUsed / limit) * 100));
+                      const isBlazePlan = storageInfo.isCloud;
+                      const getIconComponent = (iconName) => {
+                        switch (iconName) {
+                          case 'Camera': return <Camera size={18} style={{ color: 'var(--accent-blue)' }} />;
+                          case 'Cpu': return <Cpu size={18} style={{ color: 'var(--accent-green)' }} />;
+                          case 'Activity': return <ActivityIcon size={18} style={{ color: 'var(--accent-purple)' }} />;
+                          case 'Folder': return <Folder size={18} style={{ color: 'var(--accent-yellow)' }} />;
+                          case 'Settings': return <Settings size={18} style={{ color: 'var(--text-secondary)' }} />;
+                          default: return <Database size={18} style={{ color: 'var(--text-primary)' }} />;
+                        }
+                      };
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
+                              <span style={{ color: '#fbbf24' }}>📦 {formatBytes(totalUsed)} ที่ใช้</span>
+                              <span style={{ color: 'var(--text-secondary)' }}>เหลือ {formatBytes(Math.max(0, limit - totalUsed))}</span>
                             </div>
-                          );
-                        })}
+                            <div style={{ height: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${totalPercent}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderRadius: '6px', transition: 'width 0.5s ease-out' }} />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                              <span>0 GB</span>
+                              <span>{totalPercent.toFixed(1)}% ใช้งานแล้ว</span>
+                              <span>5 GB</span>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {storageInfo.categories.map((cat, idx) => {
+                              const catPercent = totalUsed > 0 ? Math.min(100, (cat.size / totalUsed) * 100) : 0;
+                              return (
+                                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {getIconComponent(cat.icon)}
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
+                                      <span>{cat.name}</span>
+                                      <span style={{ color: 'var(--text-secondary)' }}>{formatBytes(cat.size)}</span>
+                                    </div>
+                                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.07)', borderRadius: '2px', overflow: 'hidden' }}>
+                                      <div style={{ height: '100%', width: `${catPercent}%`, background: 'var(--accent-blue)', borderRadius: '2px', transition: 'width 0.4s' }} />
+                                    </div>
+                                    <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '3px' }}>{cat.description}</div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {isBlazePlan && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                              💡 <strong>แพ็กเกจ: {storageInfo.storage?.plan}</strong> — โควต้าฟรี 5 GB
+                            </div>
+                          )}
+                          <button onClick={fetchStorageInfo} className="btn btn-secondary" style={{ width: '100%', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <RotateCw size={14} /> รีเฟรชข้อมูล
+                          </button>
+                        </div>
+                      );
+                    })() : (
+                      <div style={{ textAlign: 'center', padding: '2rem' }}>
+                        <Database size={36} style={{ color: 'var(--text-secondary)', marginBottom: '12px' }} />
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>ไม่สามารถดึงข้อมูลพื้นที่จัดเก็บได้</p>
+                        <button onClick={fetchStorageInfo} className="btn btn-primary" style={{ margin: 0 }}>🔄 โหลดข้อมูล</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* === TAB 3: GEMINI AI === */}
+              {settingsTab === 'ai' && (
+                <div className="settings-panel-grid">
+                  <div className="glass-panel settings-card">
+                    <div className="settings-card-header">
+                      <span className="settings-card-icon" style={{ background: 'rgba(139,92,246,0.15)', color: 'var(--accent-purple)' }}>🤖</span>
+                      <div>
+                        <h3>Gemini AI & การคำนวณ VVM</h3>
+                        <p>ตั้งค่าหน่วยอากาศและวิธีคำนวณปริมาตรน้ำหมัก</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={async (e) => {
+                      e.preventDefault();
+                      const vvmCalcType = e.target.vvmCalcType.value;
+                      const maxVolumeLiters = e.target.maxVolumeLiters ? e.target.maxVolumeLiters.value : aboutSystem.maxVolumeLiters;
+                      const constantVolumeLiters = e.target.constantVolumeLiters ? e.target.constantVolumeLiters.value : aboutSystem.constantVolumeLiters;
+                      const airUnit = e.target.airUnit.value;
+                      try {
+                        const res = await fetch('/api/settings/update-vvm', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ vvmCalcType, maxVolumeLiters, constantVolumeLiters, airUnit })
+                        });
+                        const result = await res.json();
+                        if (res.ok) {
+                          alert('บันทึกการตั้งค่า VVM สำเร็จ');
+                          setAboutSystem(result.settings);
+                        } else {
+                          alert(`ผิดพลาด: ${result.error}`);
+                        }
+                      } catch (err) {
+                        alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+                      }
+                    }} className="settings-form">
+                      <div className="settings-ai-info-card">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '1.3rem' }}>✨</span>
+                          <strong style={{ color: 'var(--accent-purple)' }}>Gemini AI Co-pilot</strong>
+                        </div>
+                        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                          AI ช่วยวิเคราะห์แนวโน้ม pH, DO, อุณหภูมิ และตรวจจับความผิดปกติในข้อมูลกระบวนการ การตั้งค่า VVM ด้านล่างส่งผลต่อการคำนวณและการวิเคราะห์ AI ด้วย
+                        </p>
                       </div>
 
-                      {isBlazePlan && (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontStyle: 'italic', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px' }}>
-                          💡 <strong>แพ็กเกจ: {storageInfo.storage?.plan}</strong> (โควต้าฟรี 5 GB หลังโควต้าหมดจะคิดอัตราส่วนต่างที่ {storageInfo.storage?.rateInfo} โดยทำงานได้ปกติไม่ถูกตัดระบบ)
+                      <div className="settings-form-group">
+                        <label>หน่วยอัตราไหลลม (Air Flow Input Unit)</label>
+                        <select name="airUnit" value={aboutSystem.airUnit || 'mlmin'} onChange={(e) => setAboutSystem(prev => ({ ...prev, airUnit: e.target.value }))}>
+                          <option value="mlmin">mL/min — เช่น ป้อน 400 = 0.4 L/min</option>
+                          <option value="lmin">L/min (SLPM) — เช่น ป้อน 4.0 = 4.0 L/min</option>
+                        </select>
+                        <span className="settings-form-hint">หากเลือก mL/min ระบบจะหาร 1,000 อัตโนมัติในสูตร VVM</span>
+                      </div>
+
+                      <div className="settings-form-group">
+                        <label>วิธีคำนวณปริมาตรน้ำหมัก (Volume Method)</label>
+                        <select name="vvmCalcType" value={aboutSystem.vvmCalcType || 'dynamic'} onChange={(e) => setAboutSystem(prev => ({ ...prev, vvmCalcType: e.target.value }))}>
+                          <option value="dynamic">ตามระดับน้ำจริงในถัง (Dynamic Level)</option>
+                          <option value="constant">ค่าคงที่ที่กำหนดเอง (Constant Volume)</option>
+                        </select>
+                      </div>
+
+                      {(aboutSystem.vvmCalcType || 'dynamic') === 'dynamic' ? (
+                        <div className="settings-form-group">
+                          <label>ปริมาตรสูงสุดที่ระดับ 100% (ลิตร)</label>
+                          <input type="number" name="maxVolumeLiters" step="0.1" min="0.1"
+                            value={aboutSystem.maxVolumeLiters !== undefined && aboutSystem.maxVolumeLiters !== null ? aboutSystem.maxVolumeLiters : ''}
+                            onChange={(e) => setAboutSystem(prev => ({ ...prev, maxVolumeLiters: e.target.value }))} required />
+                          <span className="settings-form-hint">สูตร: SLPM ÷ ((Level% ÷ 100) × ปริมาตรสูงสุด)</span>
+                        </div>
+                      ) : (
+                        <div className="settings-form-group">
+                          <label>ปริมาตรน้ำหมักคงที่ (ลิตร)</label>
+                          <input type="number" name="constantVolumeLiters" step="0.1" min="0.1"
+                            value={aboutSystem.constantVolumeLiters !== undefined && aboutSystem.constantVolumeLiters !== null ? aboutSystem.constantVolumeLiters : ''}
+                            onChange={(e) => setAboutSystem(prev => ({ ...prev, constantVolumeLiters: e.target.value }))} required />
+                          <span className="settings-form-hint">สูตร: SLPM ÷ ปริมาตรน้ำหมักคงที่</span>
                         </div>
                       )}
 
-                      <button
-                        onClick={fetchStorageInfo}
-                        className="btn btn-secondary"
-                        style={{ width: '100%', margin: 0, marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                      >
-                        <RotateCw size={14} /> อัปเดตข้อมูลพื้นที่จัดเก็บ (Refresh Storage Info)
-                      </button>
-                    </div>
-                  );
-                })() : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', gap: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ไม่สามารถดึงข้อมูลพื้นที่จัดเก็บได้</span>
-                    <button onClick={fetchStorageInfo} className="btn btn-primary" style={{ margin: 0 }}>ลองอีกครั้ง</button>
+                      {userRole === 'admin' && (
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: '0.5rem 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          💾 บันทึกการตั้งค่า VVM
+                        </button>
+                      )}
+                    </form>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* === TAB 4: PASSWORD & ADMIN === */}
+              {settingsTab === 'password' && (
+                <div className="settings-panel-grid">
+                  <div className="glass-panel settings-card">
+                    <div className="settings-card-header">
+                      <span className="settings-card-icon" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--accent-red)' }}>🔒</span>
+                      <div>
+                        <h3>รหัสผ่านผู้ดูแลระบบ</h3>
+                        <p>เปลี่ยนรหัสผ่านสำหรับบัญชีผู้ดูแลระบบ (Admin)</p>
+                      </div>
+                    </div>
+
+                    <form onSubmit={async (e) => {
+                      e.preventDefault();
+                      const currentPassword = e.target.currentPassword.value;
+                      const newPassword = e.target.newPassword.value;
+                      const confirmPassword = e.target.confirmPassword.value;
+                      if (!currentPassword || !newPassword || !confirmPassword) {
+                        alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                        return;
+                      }
+                      if (newPassword !== confirmPassword) {
+                        alert('รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน');
+                        return;
+                      }
+                      try {
+                        const res = await fetch('/api/settings/update-password', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ currentPassword, newPassword })
+                        });
+                        const result = await res.json();
+                        if (res.ok) {
+                          alert('เปลี่ยนรหัสผ่านสำเร็จ');
+                          e.target.reset();
+                        } else {
+                          alert(`ผิดพลาด: ${result.error}`);
+                        }
+                      } catch (err) {
+                        alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+                      }
+                    }} className="settings-form">
+                      <div className="settings-password-notice">
+                        🔑 รหัสผ่านถูกเข้ารหัสอย่างปลอดภัย ไม่มีใครสามารถอ่านรหัสผ่านเดิมของคุณได้ กรุณาจำรหัสผ่านใหม่ให้ดี
+                      </div>
+
+                      <div className="settings-form-group">
+                        <label>รหัสผ่านปัจจุบัน (Current Password)</label>
+                        <input type="password" name="currentPassword" placeholder="ป้อนรหัสผ่านปัจจุบัน" required />
+                      </div>
+                      <div className="settings-form-group">
+                        <label>รหัสผ่านใหม่ (New Password)</label>
+                        <input type="password" name="newPassword" placeholder="ป้อนรหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" required />
+                      </div>
+                      <div className="settings-form-group">
+                        <label>ยืนยันรหัสผ่านใหม่ (Confirm New Password)</label>
+                        <input type="password" name="confirmPassword" placeholder="ป้อนรหัสผ่านใหม่อีกครั้ง" required />
+                      </div>
+
+                      <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: '0.5rem 0 0' }}>
+                        🔑 เปลี่ยนรหัสผ่าน
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* === TAB 5: ABOUT SYSTEM === */}
+              {settingsTab === 'about' && (
+                <div className="settings-panel-grid">
+                  <div className="glass-panel settings-card">
+                    <div className="settings-card-header">
+                      <span className="settings-card-icon" style={{ background: 'rgba(59,130,246,0.15)', color: 'var(--accent-blue)' }}>ℹ️</span>
+                      <div>
+                        <h3>เกี่ยวกับระบบ DBMS</h3>
+                        <p>ข้อมูลเวอร์ชันซอฟต์แวร์และรายละเอียดทางเทคนิค</p>
+                      </div>
+                    </div>
+
+                    <div className="settings-about-logo">
+                      <div className="settings-about-logo-icon">🧫</div>
+                      <div>
+                        <div className="settings-about-title">{aboutSystem.systemName}</div>
+                        <div className="settings-about-version">{aboutSystem.systemVersion}</div>
+                      </div>
+                    </div>
+
+                    <div className="settings-info-list">
+                      <div className="settings-info-row">
+                        <span className="info-label">👥 ผู้พัฒนา</span>
+                        <span className="info-value">{aboutSystem.developer}</span>
+                      </div>
+                      <div className="settings-info-row">
+                        <span className="info-label">⚙️ เทคโนโลยีหลัก</span>
+                        <span className="info-value" style={{ fontSize: '0.82rem' }}>{aboutSystem.techStack}</span>
+                      </div>
+                      <div className="settings-info-row">
+                        <span className="info-label">📧 อีเมลสนับสนุน</span>
+                        <span className="info-value">{aboutSystem.supportEmail}</span>
+                      </div>
+                      <div className="settings-info-row">
+                        <span className="info-label">📞 โทรศัพท์</span>
+                        <span className="info-value">{aboutSystem.supportPhone}</span>
+                      </div>
+                    </div>
+
+                    <div className="settings-tech-badges">
+                      {['React 18', 'Vite', 'Node.js', 'Firebase', 'Gemini AI', 'Recharts'].map(tech => (
+                        <span key={tech} className="settings-tech-badge">{tech}</span>
+                      ))}
+                    </div>
+
+                    <div className="settings-about-footer">
+                      © {new Date().getFullYear()} {aboutSystem.developer}. All rights reserved.
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         ) : currentAppView === 'feedbacks' ? (
