@@ -4708,7 +4708,7 @@ function App() {
               {/* Storage Space Panel */}
               <div className="glass-panel" style={{ padding: '2rem' }}>
                 <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-yellow)' }}>
-                  ☁️ พื้นที่จัดเก็บข้อมูล (System Storage)
+                  ☁️ พื้นที่จัดเก็บระบบ Firebase (Firebase Storage & DB)
                 </h3>
                 
                 {isLoadingStorage ? (
@@ -4716,59 +4716,91 @@ function App() {
                     <RotateCw size={24} style={{ animation: 'spin-blade 1s linear infinite', color: 'var(--accent-yellow)' }} />
                     <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>กำลังโหลดข้อมูลพื้นที่จัดเก็บ...</span>
                   </div>
-                ) : storageInfo ? (() => {
-                  const used = storageInfo.usedBytes || 0;
-                  const limit = storageInfo.limitBytes || (5 * 1024 * 1024 * 1024);
-                  const percent = Math.min(100, Math.max(0, (used / limit) * 100));
-                  const isCloud = storageInfo.isCloud;
+                ) : (storageInfo && storageInfo.storage && storageInfo.firestore) ? (() => {
+                  const sUsed = storageInfo.storage.usedBytes || 0;
+                  const sLimit = storageInfo.storage.freeLimitBytes || (5 * 1024 * 1024 * 1024);
+                  const sPercent = Math.min(100, Math.max(0, (sUsed / sLimit) * 100));
+                  const isBlazePlan = storageInfo.isCloud;
                   
                   return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-primary)' }}>
-                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>ประเภทพื้นที่จัดเก็บ:</span>
-                        <span style={{ fontWeight: 700, color: isCloud ? 'var(--accent-blue)' : 'var(--accent-green)' }}>
-                          {isCloud ? '☁️ Firebase Cloud Storage' : '💾 Local Server Disk'}
-                        </span>
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', color: 'var(--text-primary)' }}>
                       
-                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>พื้นที่ใช้ไป (Used):</span>
-                        <span style={{ fontWeight: 700 }}>{formatBytes(used)}</span>
-                      </div>
-                      
-                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>พื้นที่คงเหลือ (Remaining):</span>
-                        <span style={{ fontWeight: 700, color: 'var(--accent-green)' }}>{formatBytes(storageInfo.remainingBytes)}</span>
+                      {/* Section 1: Cloud Storage (Images) */}
+                      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '1.25rem' }}>
+                        <h4 style={{ color: 'var(--accent-blue)', margin: '0 0 10px 0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          📸 Firebase Storage (ไฟล์ / รูปภาพแนบ)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.88rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>แพลนการใช้งาน:</span>
+                            <span style={{ fontWeight: 700, color: isBlazePlan ? '#fbbf24' : 'var(--text-secondary)' }}>
+                              {storageInfo.storage.plan}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>พื้นที่ใช้จริง (Used):</span>
+                            <span style={{ fontWeight: 700 }}>{formatBytes(sUsed)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>โควต้าพื้นที่ฟรี (Free Tier):</span>
+                            <span>{formatBytes(sLimit)}</span>
+                          </div>
+                          
+                          {/* Progress bar */}
+                          <div style={{ marginTop: '4px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                              <span>การใช้งานเทียบกับโควต้าฟรี:</span>
+                              <span>{sPercent.toFixed(2)}%</span>
+                            </div>
+                            <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${sPercent}%`, background: 'linear-gradient(90deg, #0ea5e9, #10b981)', borderRadius: '3px' }}></div>
+                            </div>
+                          </div>
+                          
+                          {isBlazePlan && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', fontStyle: 'italic' }}>
+                              💡 Blaze Plan: ใช้งานได้ไม่จำกัด (คิดค่าบริการจริงหลังเกิน {formatBytes(sLimit)} ในอัตรา {storageInfo.storage.rateInfo})
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div style={{ paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>โควต้าทั้งหมด (Quota):</span>
-                        <span style={{ fontWeight: 700 }}>{formatBytes(limit)}</span>
-                      </div>
-                      
-                      {/* Progress Bar */}
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                          <span>การใช้งาน (Usage)</span>
-                          <span>{percent.toFixed(2)}%</span>
-                        </div>
-                        <div style={{ height: '8px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div 
-                            style={{ 
-                              height: '100%', 
-                              width: `${percent}%`, 
-                              background: percent > 90 ? 'linear-gradient(90deg, #ef4444, #b91c1c)' : (percent > 70 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 'linear-gradient(90deg, #0ea5e9, #10b981)'),
-                              borderRadius: '4px',
-                              transition: 'width 0.5s ease-out'
-                            }}
-                          ></div>
+                      {/* Section 2: Firestore Database */}
+                      <div>
+                        <h4 style={{ color: 'var(--accent-green)', margin: '0 0 10px 0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🗄️ Cloud Firestore (ฐานข้อมูลระบบ)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.88rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>แพลนการใช้งาน:</span>
+                            <span style={{ fontWeight: 700, color: isBlazePlan ? '#fbbf24' : 'var(--text-secondary)' }}>
+                              {storageInfo.firestore.plan}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>โควต้าพื้นที่ฟรี (Free Tier):</span>
+                            <span>{formatBytes(storageInfo.firestore.freeLimitBytes)} (1 GiB)</span>
+                          </div>
+                          
+                          {/* DB content counts */}
+                          <div style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', marginTop: '4px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.82rem' }}>
+                            <div>🤖 เครื่องจักร: <strong>{storageInfo.firestore.machinesCount}</strong> เครื่อง</div>
+                            <div>📁 เซสชันทั้งหมด: <strong>{storageInfo.firestore.jobsCount}</strong> รัน</div>
+                            <div style={{ gridColumn: 'span 2' }}>📊 จุดข้อมูลจัดเก็บ: <strong>{storageInfo.firestore.dataPointsCount.toLocaleString()}</strong> เรคคอร์ด</div>
+                          </div>
+
+                          {isBlazePlan && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', fontStyle: 'italic' }}>
+                              💡 Blaze Plan: เก็บข้อมูลได้ไม่จำกัด (คิดค่าบริการจริงหลังเกิน 1 GiB ในอัตรา {storageInfo.firestore.rateInfo})
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       <button
                         onClick={fetchStorageInfo}
                         className="btn btn-secondary"
-                        style={{ width: '100%', margin: 0, marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        style={{ width: '100%', margin: 0, marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                       >
                         <RotateCw size={14} /> อัปเดตข้อมูลพื้นที่จัดเก็บ (Refresh Storage Info)
                       </button>

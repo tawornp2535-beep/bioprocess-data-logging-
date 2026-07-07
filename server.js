@@ -166,6 +166,22 @@ if (isCloud) {
   }
 }
 
+let isStorageCloudAvailable = false;
+if (isCloud) {
+  try {
+    const bucket = getStorage().bucket();
+    const [exists] = await bucket.exists();
+    if (exists) {
+      isStorageCloudAvailable = true;
+      console.log('✅ Firebase Storage bucket verified successfully.');
+    } else {
+      console.warn('⚠️ Firebase Storage bucket does not exist. Falling back to local disk storage.');
+    }
+  } catch (err) {
+    console.error('❌ Firebase Storage connection test failed. Falling back to local disk storage. Error:', err.message);
+  }
+}
+
 // ──────────────────────────────────────────────────────────
 // Firestore Helper Functions
 // ──────────────────────────────────────────────────────────
@@ -585,12 +601,31 @@ app.get('/api/settings', async (req, res) => {
   res.json(publicSettings);
 });
 
-let isStorageCloudAvailable = true;
-
 app.get('/api/storage-info', async (req, res) => {
-  const limitBytes = 5 * 1024 * 1024 * 1024; // 5 GB default Firebase Storage free limit
+  const cloudStorageFreeLimit = 5 * 1024 * 1024 * 1024; // 5 GB
+  const firestoreFreeLimit = 1 * 1024 * 1024 * 1024; // 1 GiB
   let usedBytes = 0;
 
+  let dbData;
+  try {
+    dbData = await getDB();
+  } catch (err) {
+    dbData = { machines: [], jobs: [], customers: [], feedbacks: [] };
+  }
+
+  const machinesCount = dbData.machines ? dbData.machines.length : 0;
+  const jobsCount = dbData.jobs ? dbData.jobs.length : 0;
+  let dataPointsCount = 0;
+  if (dbData.jobs && Array.isArray(dbData.jobs)) {
+    dbData.jobs.forEach(job => {
+      if (job.data && Array.isArray(job.data)) {
+        dataPointsCount += job.data.length;
+      }
+    });
+  }
+
+  // Determine if Storage is Cloud or Local
+  let isStorageCloud = false;
   if (isCloud && isStorageCloudAvailable) {
     try {
       const bucket = getStorage().bucket();
@@ -598,12 +633,7 @@ app.get('/api/storage-info', async (req, res) => {
       for (const file of files) {
         usedBytes += parseInt(file.metadata.size || 0, 10);
       }
-      return res.json({
-        isCloud: true,
-        usedBytes,
-        limitBytes,
-        remainingBytes: Math.max(0, limitBytes - usedBytes)
-      });
+      isStorageCloud = true;
     } catch (err) {
       console.error('❌ Error getting Firebase Storage size, falling back to local storage:', err.message);
       if (err.code === 404 || err.message.includes('does not exist') || err.message.includes('notFound')) {
@@ -613,36 +643,49 @@ app.get('/api/storage-info', async (req, res) => {
     }
   }
 
-  // Fallback or Local Storage calculation
-  try {
-    const getDirSize = (dirPath) => {
-      let totalSize = 0;
-      if (fs.existsSync(dirPath)) {
-        const files = fs.readdirSync(dirPath);
-        for (const file of files) {
-          const filePath = path.join(dirPath, file);
-          const stats = fs.statSync(filePath);
-          if (stats.isFile()) {
-            totalSize += stats.size;
-          } else if (stats.isDirectory()) {
-            totalSize += getDirSize(filePath);
+  if (!isStorageCloud) {
+    // Local size calculation
+    try {
+      const getDirSize = (dirPath) => {
+        let totalSize = 0;
+        if (fs.existsSync(dirPath)) {
+          const files = fs.readdirSync(dirPath);
+          for (const file of files) {
+            const filePath = path.join(dirPath, file);
+            const stats = fs.statSync(filePath);
+            if (stats.isFile()) {
+              totalSize += stats.size;
+            } else if (stats.isDirectory()) {
+              totalSize += getDirSize(filePath);
+            }
           }
         }
-      }
-      return totalSize;
-    };
-
-    usedBytes = getDirSize(UPLOADS_DIR);
-    return res.json({
-      isCloud: false,
-      usedBytes,
-      limitBytes,
-      remainingBytes: Math.max(0, limitBytes - usedBytes)
-    });
-  } catch (err) {
-    console.error('Error getting local storage size:', err);
-    return res.status(500).json({ error: 'Failed to retrieve storage information' });
+        return totalSize;
+      };
+      usedBytes = getDirSize(UPLOADS_DIR);
+    } catch (err) {
+      console.error('Error getting local storage size:', err);
+    }
   }
+
+  return res.json({
+    isCloud,
+    isStorageCloud,
+    storage: {
+      usedBytes,
+      freeLimitBytes: cloudStorageFreeLimit,
+      plan: isCloud ? 'Blaze Plan (Pay as you go)' : 'Local Disk',
+      rateInfo: '$0.026 per GB after free 5 GB'
+    },
+    firestore: {
+      freeLimitBytes: firestoreFreeLimit,
+      plan: isCloud ? 'Blaze Plan (Pay as you go)' : 'Local JSON DB',
+      rateInfo: '$0.18 per GiB after free 1 GiB',
+      machinesCount,
+      jobsCount,
+      dataPointsCount
+    }
+  });
 });
 
 app.post('/api/settings/update-about', async (req, res) => {
