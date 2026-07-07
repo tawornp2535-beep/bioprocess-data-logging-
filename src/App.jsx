@@ -10,7 +10,7 @@ import {
   Download, LayoutDashboard, LineChart as ChartIcon, FolderPlus, Trash2, FolderOpen,
   Table as TableIcon, Users, Activity as ActivityIcon, Edit3,
   ChevronDown, ChevronUp, ChevronRight, Settings, LogOut, Cpu, Database, Folder,
-  Menu, X, Check, Play, Pause, RotateCcw, Star, MessageSquare
+  Menu, X, Check, Play, Pause, RotateCcw, Star, MessageSquare, Camera
 } from 'lucide-react';
 import './index.css';
 import './form.css';
@@ -1447,9 +1447,13 @@ function App() {
     air_out_set: 1.9, air_out_read: 1.9,
     heat_set: 50, heat_read: 50,
     remark: '',
+    imageUrl: '',
     date: new Date().toLocaleDateString('en-CA'),
     time: toHHMM(new Date())
   });
+
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState(null);
 
   const [visibleParameters, setVisibleParameters] = useState({
     temp: true,
@@ -2323,7 +2327,8 @@ function App() {
       air_out_read: row.air_out_read !== undefined ? row.air_out_read : parseFloat(((row.air_read || 0) * 0.96).toFixed(2)),
       heat_set: row.heat_set !== undefined ? row.heat_set : 0,
       heat_read: row.heat_read !== undefined ? row.heat_read : 0,
-      remark: row.remark !== undefined ? row.remark : ''
+      remark: row.remark !== undefined ? row.remark : '',
+      imageUrl: row.imageUrl !== undefined ? row.imageUrl : ''
     });
   };
 
@@ -2496,6 +2501,36 @@ function App() {
     document.body.removeChild(link);
   };
 
+  const compressAndUploadImage = async (file) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const base64Data = await compressImage(file, 1024, 1024, 0.8);
+        if (!base64Data) {
+          throw new Error('Image compression failed');
+        }
+        
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: file.name,
+            base64Data
+          })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          resolve(data.url);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'Upload failed');
+        }
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
   const handleManualSubmit = (e) => {
     e.preventDefault();
     const now = new Date();
@@ -2511,14 +2546,15 @@ function App() {
       formData.air_out_set, formData.air_out_read,
       formData.heat_set, formData.heat_read,
       formData.remark,
+      formData.imageUrl,
       inputTime,
       inputDate
     );
-    // Reset remark and update date/time to now
     const resetNow = new Date();
     setFormData(prev => ({
       ...prev,
       remark: '',
+      imageUrl: '',
       date: resetNow.toLocaleDateString('en-CA'),
       time: toHHMM(resetNow)
     }));
@@ -2534,12 +2570,12 @@ function App() {
     air_out_set, air_out_read,
     heat_set, heat_read,
     remark = '',
+    imageUrl = '',
     time = '',
     date = ''
   ) => {
     if (!currentJobId) return;
 
-    // Construct local timestamp on client side to avoid server-side timezone shifts
     let timestamp = new Date().toISOString();
     if (date && time) {
       const dateParts = date.split('-');
@@ -2571,6 +2607,7 @@ function App() {
           air_out_set, air_out_read,
           heat_set, heat_read,
           remark,
+          imageUrl,
           time,
           date,
           timestamp
@@ -2712,7 +2749,7 @@ function App() {
       'Volume SV (L)', 'Volume PV (L)',
       'Air Out SV (L/M)', 'Air Out PV (L/M)',
       'Heat SV (%)', 'Heat PV (%)',
-      'Remarks'
+      'Remarks', 'Image URL'
     ];
     const csvRows = [headers.join(',')];
     const mappedRows = mapDataPointsToLiters(job.data, job).sort((a, b) => {
@@ -2755,7 +2792,8 @@ function App() {
         lv_s, lv_r,
         ao_s, ao_r,
         ht_s, ht_r,
-        `"${rem.replace(/"/g, '""')}"`
+        `"${rem.replace(/"/g, '""')}"`,
+        `"${(row.imageUrl || '').replace(/"/g, '""')}"`
       ];
       csvRows.push(values.join(','));
     });
@@ -2823,7 +2861,8 @@ function App() {
         'Air Out PV (L/M)': row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((ai_r || 0) * 0.96).toFixed(2)),
         'Heat SV (%)': row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0,
         'Heat PV (%)': row.heat_read !== undefined && row.heat_read !== null ? row.heat_read : 0.0,
-        'Remarks': row.remark !== undefined ? row.remark : ''
+        'Remarks': row.remark !== undefined ? row.remark : '',
+        'Image URL': row.imageUrl || ''
       };
     });
 
@@ -5092,28 +5131,71 @@ function App() {
                       />
                     </div>
 
-                    {/* Remarks/Notes full-width input */}
-                    <div className="form-group" style={{ flex: '1 1 100%' }}>
-                      <label>REMARKS / NOTES (บันทึกข้อความ)</label>
-                      <input
-                        type="text"
-                        name="remark"
-                        placeholder="ระบุหมายเหตุหรือข้อความบันทึกที่นี่ (เช่น ปรับค่าอัตราไหล, ตรวจสภาพโพรบ)..."
-                        value={formData.remark}
-                        onChange={handleInputChange}
-                        disabled={currentJob?.status === 'finished'}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
-                          background: 'rgba(15, 23, 42, 0.5)',
-                          color: 'white',
-                          textAlign: 'left',
-                          fontFamily: 'inherit',
-                          fontSize: '0.95rem'
-                        }}
-                      />
+                    {/* Remarks/Notes and Image Upload */}
+                    <div className="form-group" style={{ flex: '1 1 100%', display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 300px' }}>
+                        <label>REMARKS / NOTES (บันทึกข้อความ)</label>
+                        <input
+                          type="text"
+                          name="remark"
+                          placeholder="ระบุหมายเหตุหรือข้อความบันทึกที่นี่ (เช่น ปรับค่าอัตราไหล, ตรวจสภาพโพรบ)..."
+                          value={formData.remark}
+                          onChange={handleInputChange}
+                          disabled={currentJob?.status === 'finished'}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            background: 'rgba(15, 23, 42, 0.5)',
+                            color: 'white',
+                            textAlign: 'left',
+                            fontFamily: 'inherit',
+                            fontSize: '0.95rem'
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <label>📸 ATTACH IMAGE (แนบรูปภาพ)</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <label className="btn btn-secondary" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '10px 14px', minHeight: '44px' }}>
+                            <Camera size={18} />
+                            {isUploadingImage ? 'Uploading...' : (formData.imageUrl ? 'เปลี่ยนรูป' : 'เลือกรูปภาพ')}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                              disabled={currentJob?.status === 'finished' || isUploadingImage}
+                              onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                setIsUploadingImage(true);
+                                try {
+                                  const url = await compressAndUploadImage(file);
+                                  setFormData(prev => ({ ...prev, imageUrl: url }));
+                                } catch (err) {
+                                  alert('Upload failed: ' + err.message);
+                                } finally {
+                                  setIsUploadingImage(false);
+                                }
+                              }}
+                            />
+                          </label>
+                          {formData.imageUrl && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(30, 41, 59, 0.5)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                              <img src={formData.imageUrl} alt="preview" style={{ width: '36px', height: '36px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                              <button
+                                type="button"
+                                className="btn btn-danger"
+                                style={{ padding: '6px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0 }}
+                                onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <button type="submit" className="btn btn-primary" style={{ minWidth: '160px', margin: 0 }} disabled={currentJob?.status === 'finished'}>
@@ -6081,12 +6163,60 @@ function App() {
                                 </>
                               )}
                               <td style={{ textAlign: 'left', padding: '6px' }}>
-                                <input
-                                  type="text"
-                                  value={editingRowData.remark}
-                                  onChange={(e) => handleEditChange('remark', e.target.value)}
-                                  style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', width: '100%', minWidth: '100px' }}
-                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <input
+                                    type="text"
+                                    value={editingRowData.remark}
+                                    onChange={(e) => handleEditChange('remark', e.target.value)}
+                                    style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.85rem', flex: 1, minWidth: '80px' }}
+                                  />
+                                  <label 
+                                    style={{ 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      justifyContent: 'center', 
+                                      cursor: isUploadingImage ? 'not-allowed' : 'pointer', 
+                                      color: isUploadingImage ? 'var(--text-secondary)' : (editingRowData.imageUrl ? 'var(--accent-green)' : 'var(--text-secondary)') 
+                                    }} 
+                                    title={isUploadingImage ? "กำลังอัปโหลดรูปภาพ..." : "แนบรูปภาพ (Attach image)"}
+                                  >
+                                    {isUploadingImage ? (
+                                      <RotateCw size={16} style={{ animation: 'spin-blade 1s linear infinite' }} />
+                                    ) : (
+                                      <Camera size={16} />
+                                    )}
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      style={{ display: 'none' }}
+                                      disabled={isUploadingImage}
+                                      onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (!file) return;
+                                        setIsUploadingImage(true);
+                                        try {
+                                          const url = await compressAndUploadImage(file);
+                                          handleEditChange('imageUrl', url);
+                                        } catch (err) {
+                                          alert('Upload failed: ' + err.message);
+                                        } finally {
+                                          setIsUploadingImage(false);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                  {editingRowData.imageUrl && (
+                                    <button
+                                      type="button"
+                                      disabled={isUploadingImage}
+                                      onClick={() => handleEditChange('imageUrl', '')}
+                                      style={{ background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: isUploadingImage ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+                                      title="Remove image"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                               {userRole === 'admin' && (
                                 <td style={{ textAlign: 'center', padding: '6px' }}>
@@ -6164,7 +6294,20 @@ function App() {
                                   <td style={{ textAlign: 'center', color: 'var(--accent-yellow)', fontWeight: 600 }}>{typeof row.heat_read === 'number' ? row.heat_read.toFixed(1) : '-'}</td>
                                 </>
                               )}
-                              <td className="remarks-cell" style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{row.remark || '-'}</td>
+                              <td className="remarks-cell" style={{ textAlign: 'left', padding: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {row.imageUrl && (
+                                    <img
+                                      src={row.imageUrl}
+                                      alt="attachment"
+                                      style={{ width: '28px', height: '28px', borderRadius: '4px', objectFit: 'cover', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }}
+                                      onClick={() => setSelectedImageUrl(row.imageUrl)}
+                                      title="คลิกเพื่อดูรูปภาพขนาดเต็ม"
+                                    />
+                                  )}
+                                  <span>{row.remark || '-'}</span>
+                                </div>
+                              </td>
                               {userRole === 'admin' && (
                                 <td style={{ textAlign: 'center' }}>
                                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
@@ -7268,6 +7411,59 @@ function App() {
 
             </form>
 
+          </div>
+        </div>
+      )}
+      {/* Lightbox Modal for attached images */}
+      {selectedImageUrl && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            cursor: 'zoom-out'
+          }}
+          onClick={() => setSelectedImageUrl(null)}
+        >
+          <div style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }}>
+            <img 
+              src={selectedImageUrl} 
+              alt="expanded view" 
+              style={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                borderRadius: '8px',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }} 
+            />
+            <button
+              onClick={() => setSelectedImageUrl(null)}
+              style={{
+                position: 'absolute',
+                top: '-40px',
+                right: '0px',
+                background: 'rgba(30,41,59,0.8)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={18} />
+            </button>
           </div>
         </div>
       )}

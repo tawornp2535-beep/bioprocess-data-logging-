@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
 // Load environment variables
 dotenv.config();
@@ -13,11 +14,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DB_FILE = path.join(__dirname, 'db.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -116,7 +123,8 @@ if (SERVICE_ACCOUNT_JSON) {
   try {
     const serviceAccount = JSON.parse(SERVICE_ACCOUNT_JSON);
     initializeApp({
-      credential: cert(serviceAccount)
+      credential: cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
     });
     db = getFirestore('default');
     isCloud = true;
@@ -130,7 +138,8 @@ if (SERVICE_ACCOUNT_JSON) {
       fs.readFileSync(path.resolve(__dirname, SERVICE_ACCOUNT_PATH), 'utf-8')
     );
     initializeApp({
-      credential: cert(serviceAccount)
+      credential: cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
     });
     db = getFirestore('default');
     isCloud = true;
@@ -868,6 +877,52 @@ app.put('/api/jobs/:id/finish', async (req, res) => {
   res.json(await getDB());
 });
 
+app.post('/api/upload', async (req, res) => {
+  const { fileName, base64Data } = req.body;
+  if (!base64Data) {
+    return res.status(400).json({ error: 'No image data provided' });
+  }
+
+  const cleanFileName = fileName ? fileName.replace(/[^a-zA-Z0-9_.-]/g, '') : `img_${Date.now()}.jpg`;
+
+  try {
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: 'Invalid base64 image data format' });
+    }
+    const buffer = Buffer.from(matches[2], 'base64');
+    const mimeType = matches[1];
+
+    if (isCloud) {
+      try {
+        const bucket = getStorage().bucket();
+        const fileRef = bucket.file(`uploads/${Date.now()}_${cleanFileName}`);
+        
+        await fileRef.save(buffer, {
+          metadata: { contentType: mimeType },
+          public: true
+        });
+
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileRef.name}`;
+        console.log(`✅ Uploaded image to Firebase Storage: ${publicUrl}`);
+        return res.json({ url: publicUrl });
+      } catch (err) {
+        console.error('❌ Failed to upload to Firebase Storage, falling back to local storage:', err.message);
+      }
+    }
+
+    const localPath = path.join(UPLOADS_DIR, `${Date.now()}_${cleanFileName}`);
+    fs.writeFileSync(localPath, buffer);
+    const localUrl = `/uploads/${path.basename(localPath)}`;
+    console.log(`💾 Saved image locally (Offline): ${localUrl}`);
+    return res.json({ url: localUrl });
+
+  } catch (err) {
+    console.error('❌ Error handling image upload:', err);
+    return res.status(500).json({ error: 'Failed to process image upload' });
+  }
+});
+
 // ── Data Points ──────────────────────────────────────────
 
 app.post('/api/jobs/:id/data', async (req, res) => {
@@ -926,6 +981,7 @@ app.post('/api/jobs/:id/data', async (req, res) => {
     air_out_read: req.body.air_out_read !== undefined && req.body.air_out_read !== null ? parseFloat(req.body.air_out_read) : null,
     heat_set: req.body.heat_set !== undefined && req.body.heat_set !== null ? parseFloat(req.body.heat_set) : null,
     heat_read: req.body.heat_read !== undefined && req.body.heat_read !== null ? parseFloat(req.body.heat_read) : null,
+    imageUrl: req.body.imageUrl || null,
     remark: remark || ''
   };
 
@@ -1035,6 +1091,7 @@ app.put('/api/jobs/:id/data/:index', async (req, res) => {
     air_out_read: updatedPoint.air_out_read !== undefined && updatedPoint.air_out_read !== null ? parseFloat(updatedPoint.air_out_read) : null,
     heat_set: updatedPoint.heat_set !== undefined && updatedPoint.heat_set !== null ? parseFloat(updatedPoint.heat_set) : null,
     heat_read: updatedPoint.heat_read !== undefined && updatedPoint.heat_read !== null ? parseFloat(updatedPoint.heat_read) : null,
+    imageUrl: updatedPoint.imageUrl || null,
     remark: updatedPoint.remark || ''
   };
 

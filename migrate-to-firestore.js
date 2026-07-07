@@ -53,8 +53,14 @@ async function migrate() {
       console.log(`\nMigrating ${localData.machines.length} machines...`);
       for (const machine of localData.machines) {
         if (!machine.id) continue;
-        await db.collection('machines').doc(machine.id).set(machine);
-        console.log(`  - Migrated machine: ${machine.name} (${machine.id})`);
+        const docRef = db.collection('machines').doc(machine.id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          console.log(`  - Machine ${machine.id} (${machine.name}) already exists in Firestore, skipping.`);
+        } else {
+          await docRef.set(machine);
+          console.log(`  - Migrated machine: ${machine.name} (${machine.id})`);
+        }
       }
     }
 
@@ -63,8 +69,14 @@ async function migrate() {
       console.log(`\nMigrating ${localData.jobs.length} sessions...`);
       for (const job of localData.jobs) {
         if (!job.id) continue;
-        await db.collection('jobs').doc(job.id).set(job);
-        console.log(`  - Migrated session: ${job.name} (${job.id}) with ${job.data ? job.data.length : 0} data points`);
+        const docRef = db.collection('jobs').doc(job.id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          console.log(`  - Session ${job.id} (${job.name}) already exists in Firestore, skipping.`);
+        } else {
+          await docRef.set(job);
+          console.log(`  - Migrated session: ${job.name} (${job.id}) with ${job.data ? job.data.length : 0} data points`);
+        }
       }
     }
 
@@ -73,10 +85,15 @@ async function migrate() {
       console.log(`\nMigrating ${localData.customers.length} customers...`);
       for (const customer of localData.customers) {
         if (!customer.id) continue;
-        // Clean undefined fields just in case
-        const cleanCustomer = JSON.parse(JSON.stringify(customer));
-        await db.collection('customers').doc(customer.id).set(cleanCustomer);
-        console.log(`  - Migrated customer: ${customer.companyName} (${customer.id})`);
+        const docRef = db.collection('customers').doc(customer.id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          console.log(`  - Customer ${customer.id} (${customer.companyName}) already exists in Firestore, skipping.`);
+        } else {
+          const cleanCustomer = JSON.parse(JSON.stringify(customer));
+          await docRef.set(cleanCustomer);
+          console.log(`  - Migrated customer: ${customer.companyName} (${customer.id})`);
+        }
       }
     }
 
