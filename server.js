@@ -412,7 +412,8 @@ const getSettings = async () => {
     vvmCalcType: 'dynamic',
     maxVolumeLiters: 5.0,
     constantVolumeLiters: 3.5,
-    airUnit: 'mlmin'
+    airUnit: 'mlmin',
+    cctvUrl: ''
   };
   
   let needsWrite = false;
@@ -747,13 +748,14 @@ app.post('/api/settings/update-about', async (req, res) => {
 });
 
 app.post('/api/settings/update-vvm', async (req, res) => {
-  const { vvmCalcType, maxVolumeLiters, constantVolumeLiters, airUnit } = req.body;
+  const { vvmCalcType, maxVolumeLiters, constantVolumeLiters, airUnit, cctvUrl } = req.body;
   const settings = await getSettings();
 
   settings.vvmCalcType = vvmCalcType || 'dynamic';
   settings.maxVolumeLiters = parseFloat(maxVolumeLiters) || 5.0;
   settings.constantVolumeLiters = parseFloat(constantVolumeLiters) || 3.5;
   settings.airUnit = airUnit || 'mlmin';
+  settings.cctvUrl = cctvUrl !== undefined ? cctvUrl : '';
 
   await saveSettings(settings);
   

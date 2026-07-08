@@ -185,6 +185,14 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 // BSTR Diagram Component
 const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jobStatus = 'running', onToggleStatus, userRole, isViewingHistory, theme, aboutSystem, machineName }) => {
+  const [cctvMode, setCctvMode] = useState('diagram'); // 'diagram' | 'camera'
+  const [cctvError, setCctvError] = useState(false);
+  const cctvUrl = aboutSystem?.cctvUrl || '';
+
+  useEffect(() => {
+    setCctvError(false);
+  }, [cctvUrl]);
+
   if (!dataPoint) {
     return (
       <div className="glass-panel empty-state" style={{ height: '500px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -428,8 +436,66 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
 
         {/* Center: Scalable Reactor SVG Vessel */}
         <div className="diagram-reactor-vessel-col">
+          {/* HMI View Toggle Switch */}
+          <div style={{
+            position: 'absolute',
+            top: '12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10,
+            display: 'flex',
+            gap: '4px',
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            padding: '4px',
+            borderRadius: '20px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
+          }}>
+            <button
+              onClick={() => setCctvMode('diagram')}
+              style={{
+                background: cctvMode === 'diagram' ? 'var(--accent-blue)' : 'transparent',
+                border: 'none',
+                color: cctvMode === 'diagram' ? '#fff' : 'var(--text-secondary)',
+                padding: '4px 12px',
+                borderRadius: '16px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                margin: 0
+              }}
+            >
+              📊 Diagram
+            </button>
+            <button
+              onClick={() => setCctvMode('camera')}
+              style={{
+                background: cctvMode === 'camera' ? 'var(--accent-blue)' : 'transparent',
+                border: 'none',
+                color: cctvMode === 'camera' ? '#fff' : 'var(--text-secondary)',
+                padding: '4px 12px',
+                borderRadius: '16px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                margin: 0
+              }}
+            >
+              📹 Live Camera
+            </button>
+          </div>
 
-          <svg className="reactor-vessel-svg" viewBox="0 0 300 480" width="100%" height="100%">
+          {cctvMode === 'diagram' ? (
+            <svg className="reactor-vessel-svg" viewBox="0 0 300 480" width="100%" height="100%">
             <defs>
               {/* Metallic Gradients */}
               <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -808,6 +874,112 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
               );
             })()}
           </svg>
+          ) : (
+            <div style={{
+              width: '100%',
+              height: '480px',
+              background: '#070b13',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: 'inset 0 4px 20px rgba(0,0,0,0.8)'
+            }}>
+              {/* Blinking Live Badge */}
+              <div style={{
+                position: 'absolute',
+                top: '16px',
+                left: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(0,0,0,0.6)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '0.7rem',
+                color: '#fff',
+                fontWeight: 'bold',
+                zIndex: 5
+              }}>
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: cctvError || !cctvUrl ? '#ef4444' : '#10b981',
+                  display: 'inline-block',
+                  boxShadow: cctvError || !cctvUrl ? '0 0 6px #ef4444' : '0 0 6px #10b981',
+                  animation: 'pulse 1.5s infinite'
+                }}></span>
+                {cctvError || !cctvUrl ? 'OFFLINE' : 'LIVE'}
+              </div>
+
+              {/* Ticking Clock overlay */}
+              <div style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'rgba(0,0,0,0.6)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                fontSize: '0.7rem',
+                color: '#cbdce0',
+                fontFamily: 'monospace',
+                zIndex: 5
+              }}>
+                {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+              </div>
+
+              {/* Camera Feed Render */}
+              {!cctvUrl ? (
+                // Case A: Unconfigured URL
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>📷</div>
+                  <h4 style={{ color: 'white', marginBottom: '6px', fontWeight: 600 }}>CCTV Standby</h4>
+                  <p style={{ fontSize: '0.8rem', maxWidth: '240px', margin: '0 auto', lineHeight: 1.4 }}>
+                    ยังไม่ได้เชื่อมต่อกล้องวงจรปิด ตั้งค่า URL สตรีมสดได้ในระบบตั้งค่า
+                  </p>
+                </div>
+              ) : cctvError ? (
+                // Case B: Connection Failed
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: '12px', color: '#f87171' }}>⚠️</div>
+                  <h4 style={{ color: 'white', marginBottom: '6px', fontWeight: 600 }}>Camera Offline</h4>
+                  <p style={{ fontSize: '0.8rem', maxWidth: '240px', margin: '0 auto', lineHeight: 1.4, marginBottom: '12px' }}>
+                    ไม่สามารถเชื่อมต่อกล้องที่ {cctvUrl} ได้ กรุณาตรวจสอบวง Wi-Fi หรือการตั้งค่า
+                  </p>
+                  <button 
+                    onClick={() => setCctvError(false)}
+                    className="btn btn-secondary btn-small"
+                    style={{ margin: '0 auto', fontSize: '0.75rem', height: '28px', padding: '0 10px' }}
+                  >
+                    🔄 ลองเชื่อมต่อใหม่
+                  </button>
+                </div>
+              ) : cctvUrl.includes('ezviz') || cctvUrl.includes('iframe') || cctvUrl.includes('.html') ? (
+                // Case C: EZVIZ / Cloud Iframe Player
+                <iframe
+                  src={cctvUrl}
+                  width="100%"
+                  height="100%"
+                  allowFullScreen
+                  style={{ border: 'none', background: '#000' }}
+                  onError={() => setCctvError(true)}
+                />
+              ) : (
+                // Case D: Local IP MJPEG Stream (like IP Webcam / DroidCam / Tapo converted stream)
+                <img
+                  src={cctvUrl}
+                  alt="CCTV Live Stream"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={() => setCctvError(true)}
+                />
+              )}
+            </div>
+          )}
 
           {/* Motor Drive RPM Display Box Overlaid on Vessel Head */}
           <div className="motor-drive-display">
@@ -4631,11 +4803,12 @@ function App() {
                       const maxVolumeLiters = e.target.maxVolumeLiters ? e.target.maxVolumeLiters.value : aboutSystem.maxVolumeLiters;
                       const constantVolumeLiters = e.target.constantVolumeLiters ? e.target.constantVolumeLiters.value : aboutSystem.constantVolumeLiters;
                       const airUnit = e.target.airUnit.value;
+                      const cctvUrl = e.target.cctvUrl ? e.target.cctvUrl.value : aboutSystem.cctvUrl;
                       try {
                         const res = await fetch('/api/settings/update-vvm', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ vvmCalcType, maxVolumeLiters, constantVolumeLiters, airUnit })
+                          body: JSON.stringify({ vvmCalcType, maxVolumeLiters, constantVolumeLiters, airUnit, cctvUrl })
                         });
                         const result = await res.json();
                         if (res.ok) {
@@ -4693,9 +4866,17 @@ function App() {
                         </div>
                       )}
 
+                      <div className="settings-form-group">
+                        <label>ที่อยู่กล้องวงจรปิด (CCTV Stream URL)</label>
+                        <input type="text" name="cctvUrl" placeholder="เช่น http://192.168.1.99:8080/video หรือลิงก์ EZVIZ Cloud"
+                          value={aboutSystem.cctvUrl !== undefined && aboutSystem.cctvUrl !== null ? aboutSystem.cctvUrl : ''}
+                          onChange={(e) => setAboutSystem(prev => ({ ...prev, cctvUrl: e.target.value }))} />
+                        <span className="settings-form-hint">ใส่ลิงก์สตรีมแบบ MJPEG (เช่นแอป IP Webcam) หรือลิงก์ iframe ของ EZVIZ เพื่อแสดงกล้องสด</span>
+                      </div>
+
                       {userRole === 'admin' && (
                         <button type="submit" className="btn btn-primary" style={{ width: '100%', margin: '0.5rem 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                          💾 บันทึกการตั้งค่า VVM
+                          💾 บันทึกการตั้งค่า VVM & CCTV
                         </button>
                       )}
                     </form>
