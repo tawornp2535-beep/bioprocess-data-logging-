@@ -5281,36 +5281,55 @@ function App() {
                       />
                     </div>
 
-                    {/* Remarks/Notes and Image Upload */}
-                    <div className="form-group" style={{ flex: '1 1 100%', display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                      <div style={{ flex: '1 1 300px' }}>
-                        <label>REMARKS / NOTES (บันทึกข้อความ)</label>
-                        <input
-                          type="text"
-                          name="remark"
-                          placeholder="ระบุหมายเหตุหรือข้อความบันทึกที่นี่ (เช่น ปรับค่าอัตราไหล, ตรวจสภาพโพรบ)..."
-                          value={formData.remark}
-                          onChange={handleInputChange}
-                          disabled={currentJob?.status === 'finished'}
-                          style={{
-                            width: '100%',
-                            padding: '10px 14px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-color)',
-                            background: 'rgba(15, 23, 42, 0.5)',
-                            color: 'white',
-                            textAlign: 'left',
-                            fontFamily: 'inherit',
-                            fontSize: '0.95rem'
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label>📸 ATTACH IMAGE (แนบรูปภาพ)</label>
+                    {/* Remarks/Notes and Image Upload Row */}
+                    <div className="form-group" style={{ flex: '1 1 100%', marginBottom: '0.5rem' }}>
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '0.5rem', display: 'block' }}>
+                        REMARKS / NOTES (บันทึกข้อความ)
+                      </label>
+                      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
+                        <div style={{ flex: '1 1 450px', minWidth: '280px' }}>
+                          <input
+                            type="text"
+                            name="remark"
+                            placeholder="ระบุหมายเหตุหรือข้อความบันทึกที่นี่ (เช่น ปรับค่าอัตราไหล, ตรวจสภาพโพรบ)..."
+                            value={formData.remark}
+                            onChange={handleInputChange}
+                            disabled={currentJob?.status === 'finished'}
+                            style={{
+                              width: '100%',
+                              padding: '10px 14px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-color)',
+                              background: 'rgba(15, 23, 42, 0.5)',
+                              color: 'white',
+                              textAlign: 'left',
+                              fontFamily: 'inherit',
+                              fontSize: '0.95rem',
+                              height: '42px',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <label className="btn btn-secondary" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '10px 14px', minHeight: '44px' }}>
+                          <label className="btn btn-secondary" style={{
+                            margin: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            cursor: 'pointer',
+                            padding: '10px 16px',
+                            height: '42px',
+                            boxSizing: 'border-box',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            color: '#cbdce0',
+                            fontSize: '0.9rem',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                          }}>
                             <Camera size={18} />
-                            {isUploadingImage ? 'Uploading...' : (formData.imageUrl ? 'เปลี่ยนรูป' : 'เลือกรูปภาพ')}
+                            <span>{isUploadingImage ? 'Uploading...' : (formData.imageUrl ? 'เปลี่ยนรูป' : 'เลือกรูปภาพ')}</span>
                             <input
                               type="file"
                               accept="image/*"
@@ -5332,12 +5351,12 @@ function App() {
                             />
                           </label>
                           {formData.imageUrl && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(30, 41, 59, 0.5)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                              <img src={formData.imageUrl} alt="preview" style={{ width: '36px', height: '36px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(30, 41, 59, 0.5)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', height: '42px', boxSizing: 'border-box' }}>
+                              <img src={formData.imageUrl} alt="preview" style={{ width: '30px', height: '30px', borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
                               <button
                                 type="button"
                                 className="btn btn-danger"
-                                style={{ padding: '6px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0 }}
+                                style={{ padding: '4px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, height: '30px', width: '30px' }}
                                 onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
                               >
                                 <Trash2 size={14} />
@@ -5345,12 +5364,42 @@ function App() {
                             </div>
                           )}
                         </div>
+                        <button
+                          type="submit"
+                          className="btn"
+                          style={{
+                            minWidth: '160px',
+                            margin: 0,
+                            height: '42px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            background: 'linear-gradient(135deg, var(--accent-green), #059669)',
+                            border: 'none',
+                            color: '#fff',
+                            fontWeight: 700,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.35)';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.25)';
+                          }}
+                          disabled={currentJob?.status === 'finished'}
+                        >
+                          <PlusCircle size={18} />
+                          <span>Add Record</span>
+                        </button>
                       </div>
                     </div>
                   </div>
-                  <button type="submit" className="btn btn-primary" style={{ minWidth: '160px', margin: 0 }} disabled={currentJob?.status === 'finished'}>
-                    <PlusCircle size={18} style={{ marginRight: '8px' }} /> Add Record
-                  </button>
                 </form>
               </div>
             )}
