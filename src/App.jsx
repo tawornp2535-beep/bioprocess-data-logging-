@@ -1820,6 +1820,7 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('diagram'); // 'diagram' | 'dashboard' | 'combined' | 'table' | 'ai'
   const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [presentationLayout, setPresentationLayout] = useState('chart'); // 'chart' | 'cctv'
   const [settingsTab, setSettingsTab] = useState('business'); // 'business' | 'firebase' | 'ai' | 'password' | 'about'
   // AI Assistant States
   const [aiReport, setAiReport] = useState('');
@@ -8497,6 +8498,120 @@ function App() {
           { label: 'Agitation', unit: 'RPM', pv: typeof dataPoint.agit_read === 'number' ? Math.round(dataPoint.agit_read) : '—', sp: typeof dataPoint.agit_set === 'number' ? Math.round(dataPoint.agit_set) : '—', color: '#eab308', bg: 'rgba(234,179,8,0.08)', icon: '🔄' },
           { label: 'Air Flow', unit: (aboutSystem?.airUnit || 'mlmin') === 'mlmin' ? 'mL/min' : 'L/min', pv: pv('air_read', 1), sp: sp('air_set', 1), color: '#a855f7', bg: 'rgba(168,85,247,0.08)', icon: '💨' },
         ];
+
+        const renderCCTVFeed = () => {
+          const cctvUrl = aboutSystem?.cctvUrl || localStorage.getItem('dbms-cctv-url') || '';
+          if (!cctvUrl) {
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
+                <span style={{ fontSize: '2rem' }}>⚠️</span>
+                <span style={{ marginTop: '8px', fontSize: '0.9rem' }}>ยังไม่ได้ตั้งค่ากล้อง CCTV</span>
+                <span style={{ fontSize: '0.8rem', color: '#475569', marginTop: '4px' }}>ไปตั้งค่าที่เมนู System Settings ด้านซ้าย</span>
+              </div>
+            );
+          }
+          if (cctvUrl.toLowerCase() === 'mock' || cctvUrl.toLowerCase() === 'demo' || cctvUrl.toLowerCase() === 'simulation') {
+            return (
+              <div style={{ position: 'relative', width: '100%', height: '100%', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+                <img
+                  src="/mock-bioreactor.jpg"
+                  alt="Mock Feed"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }}
+                  onError={(e) => {
+                    // Fallback background if mock image is not found
+                    e.target.style.display = 'none';
+                  }}
+                />
+                <div style={{
+                  position: 'absolute', top: '16px', left: '16px',
+                  background: 'rgba(239, 68, 68, 0.85)', color: 'white',
+                  padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem',
+                  fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px',
+                  boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
+                }}>
+                  <span style={{ display: 'inline-block', width: 8, height: 8, background: 'white', borderRadius: '50%' }}></span>
+                  LIVE REC (SIMULATION)
+                </div>
+                <div style={{ position: 'absolute', top: '16px', right: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', fontWeight: 600 }}>
+                  CAM_01_LAB_TV
+                </div>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', pointerEvents: 'none' }}>
+                  <div style={{ color: 'rgba(0, 255, 102, 0.65)', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                    [OFFLINE SIMULATION FEED]
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (cctvUrl.includes('youtube.com') || cctvUrl.includes('youtu.be')) {
+            let videoId = '';
+            try {
+              const url = new URL(cctvUrl);
+              if (url.hostname === 'youtu.be') {
+                videoId = url.pathname.slice(1).split('?')[0];
+              } else if (url.pathname.includes('/live/')) {
+                videoId = url.pathname.split('/live/')[1].split('?')[0];
+              } else {
+                videoId = url.searchParams.get('v') || '';
+              }
+            } catch (_) {}
+            const embedUrl = videoId
+              ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&rel=0`
+              : '';
+            return embedUrl ? (
+              <iframe
+                src={embedUrl}
+                width="100%"
+                height="100%"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ border: 'none', background: '#000', borderRadius: '12px' }}
+              />
+            ) : (
+              <div style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
+                ไม่สามารถแยก Video ID จาก YouTube URL ได้
+              </div>
+            );
+          }
+
+          if (cctvUrl.includes('ezviz') || cctvUrl.includes('iframe') || cctvUrl.includes('.html')) {
+            return (
+              <iframe
+                src={cctvUrl}
+                width="100%"
+                height="100%"
+                allowFullScreen
+                style={{ border: 'none', background: '#000', borderRadius: '12px' }}
+              />
+            );
+          }
+
+          if (cctvUrl.match(/\.(mp4|webm|ogg|mov)/i) || cctvUrl.includes('mixkit.co')) {
+            return (
+              <video
+                src={cctvUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
+              />
+            );
+          }
+
+          return (
+            <img
+              src={cctvUrl}
+              alt="CCTV Live Stream"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          );
+        };
+
         return (
           <div
             style={{
@@ -8528,6 +8643,39 @@ function App() {
                     {currentJob.name}
                   </div>
                 </div>
+              </div>
+
+              {/* Layout Switcher (Chart vs CCTV) */}
+              <div style={{
+                display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)',
+                padding: '4px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)'
+              }}>
+                <button
+                  onClick={() => setPresentationLayout('chart')}
+                  style={{
+                    padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600,
+                    borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: presentationLayout === 'chart' ? '#6366f1' : 'transparent',
+                    color: presentationLayout === 'chart' ? 'white' : '#94a3b8',
+                    transition: 'all 0.15s ease',
+                    margin: 0
+                  }}
+                >
+                  📈 Trend Chart
+                </button>
+                <button
+                  onClick={() => setPresentationLayout('cctv')}
+                  style={{
+                    padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600,
+                    borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: presentationLayout === 'cctv' ? '#6366f1' : 'transparent',
+                    color: presentationLayout === 'cctv' ? 'white' : '#94a3b8',
+                    transition: 'all 0.15s ease',
+                    margin: 0
+                  }}
+                >
+                  🎥 CCTV Live
+                </button>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
@@ -8601,39 +8749,45 @@ function App() {
                 ))}
               </div>
 
-              {/* RIGHT: Chart */}
+              {/* RIGHT: Chart or CCTV */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
                 <div style={{
                   flex: 1, background: 'rgba(15,23,42,0.6)', borderRadius: '16px',
-                  border: '1px solid rgba(99,102,241,0.15)', padding: '16px 8px 8px',
+                  border: '1px solid rgba(99,102,241,0.15)', padding: presentationLayout === 'cctv' ? '8px' : '16px 8px 8px',
                   display: 'flex', flexDirection: 'column', minHeight: 0
                 }}>
-                  <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', paddingLeft: '12px', marginBottom: '6px' }}>
-                    📈 Combined Bioprocess Trend
-                  </div>
+                  {presentationLayout !== 'cctv' && (
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', paddingLeft: '12px', marginBottom: '6px' }}>
+                      📈 Combined Bioprocess Trend
+                    </div>
+                  )}
                   <div style={{ flex: 1, minHeight: 0 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 8, right: 50, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis
-                          dataKey="cultureHour"
-                          stroke="#334155"
-                          tick={{ fontSize: 12, fill: '#64748b' }}
-                          interval="preserveStartEnd"
-                          minTickGap={60}
-                          tickFormatter={v => typeof v === 'number' ? v.toFixed(1) + 'h' : v}
-                        />
-                        <YAxis yAxisId="left" stroke="#334155" tick={{ fontSize: 11, fill: '#64748b' }} width={38} tickFormatter={v => typeof v === 'number' ? v.toFixed(1) : v} />
-                        <YAxis yAxisId="right" orientation="right" stroke="#334155" tick={{ fontSize: 11, fill: '#64748b' }} width={45} tickFormatter={v => typeof v === 'number' ? v.toFixed(0) : v} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
-                        {visibleParameters.temp && <Line yAxisId="left" type="monotone" dataKey="temp_read" name="TEMP (°C)" stroke="#ef4444" strokeWidth={2.5} dot={false} />}
-                        {visibleParameters.ph && <Line yAxisId="left" type="monotone" dataKey="ph_read" name="pH" stroke="#3b82f6" strokeWidth={2.5} dot={false} />}
-                        {visibleParameters.do && <Line yAxisId="left" type="monotone" dataKey="do_read" name="DO (%)" stroke="#22c55e" strokeWidth={2.5} dot={false} />}
-                        {visibleParameters.agit && <Line yAxisId="right" type="monotone" dataKey="agit_read" name="AGIT (RPM)" stroke="#eab308" strokeWidth={2.5} dot={false} />}
-                        {visibleParameters.air && <Line yAxisId="right" type="monotone" dataKey="air_read" name="Air Flow" stroke="#a855f7" strokeWidth={2.5} dot={false} />}
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {presentationLayout === 'cctv' ? (
+                      renderCCTVFeed()
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={{ top: 8, right: 50, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                          <XAxis
+                            dataKey="cultureHour"
+                            stroke="#334155"
+                            tick={{ fontSize: 12, fill: '#64748b' }}
+                            interval="preserveStartEnd"
+                            minTickGap={60}
+                            tickFormatter={v => typeof v === 'number' ? v.toFixed(1) + 'h' : v}
+                          />
+                          <YAxis yAxisId="left" stroke="#334155" tick={{ fontSize: 11, fill: '#64748b' }} width={38} tickFormatter={v => typeof v === 'number' ? v.toFixed(1) : v} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#334155" tick={{ fontSize: 11, fill: '#64748b' }} width={45} tickFormatter={v => typeof v === 'number' ? v.toFixed(0) : v} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }} />
+                          {visibleParameters.temp && <Line yAxisId="left" type="monotone" dataKey="temp_read" name="TEMP (°C)" stroke="#ef4444" strokeWidth={2.5} dot={false} />}
+                          {visibleParameters.ph && <Line yAxisId="left" type="monotone" dataKey="ph_read" name="pH" stroke="#3b82f6" strokeWidth={2.5} dot={false} />}
+                          {visibleParameters.do && <Line yAxisId="left" type="monotone" dataKey="do_read" name="DO (%)" stroke="#22c55e" strokeWidth={2.5} dot={false} />}
+                          {visibleParameters.agit && <Line yAxisId="right" type="monotone" dataKey="agit_read" name="AGIT (RPM)" stroke="#eab308" strokeWidth={2.5} dot={false} />}
+                          {visibleParameters.air && <Line yAxisId="right" type="monotone" dataKey="air_read" name="Air Flow" stroke="#a855f7" strokeWidth={2.5} dot={false} />}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </div>
 
