@@ -6307,32 +6307,6 @@ function App() {
                     <Users size={18} style={{ marginRight: '8px' }} /> แชร์ลูกค้า
                   </button>
                 )}
-                {currentJob && (
-                  <button
-                    onClick={() => setCurrentAppView('presentation')}
-                    style={{
-                      margin: 0,
-                      background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                      border: 'none',
-                      color: '#fff',
-                      padding: '0 16px',
-                      height: '38px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontWeight: 600,
-                      fontSize: '0.85rem',
-                      fontFamily: 'inherit',
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 0 12px rgba(124,58,237,0.4)'
-                    }}
-                    title="ไปหน้า Presentation Mode"
-                  >
-                    🖥️ Presentation
-                  </button>
-                )}
               </div>
             </header>
 
