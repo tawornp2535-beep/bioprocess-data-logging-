@@ -187,7 +187,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jobStatus = 'running', onToggleStatus, userRole, isViewingHistory, theme, aboutSystem, machineName }) => {
   const [cctvMode, setCctvMode] = useState('diagram'); // 'diagram' | 'camera'
   const [cctvError, setCctvError] = useState(false);
-  const cctvUrl = aboutSystem?.cctvUrl || '';
+  const cctvUrl = aboutSystem?.cctvUrl || localStorage.getItem('dbms-cctv-url') || '';
 
   useEffect(() => {
     setCctvError(false);
@@ -5075,6 +5075,7 @@ function App() {
                     <form onSubmit={async (e) => {
                       e.preventDefault();
                       const cctvUrl = e.target.cctvUrl.value;
+                      localStorage.setItem('dbms-cctv-url', cctvUrl);
                       
                       try {
                         const res = await fetch('/api/settings/update-vvm', {
@@ -5113,7 +5114,7 @@ function App() {
                       <div className="settings-form-group" style={{ marginTop: '1rem' }}>
                         <label>ที่อยู่ลิงก์สตรีมกล้อง (CCTV Stream URL)</label>
                         <input type="text" name="cctvUrl" placeholder="เช่น http://192.168.1.99:8080/video หรือลิงก์ EZVIZ"
-                          value={aboutSystem.cctvUrl !== undefined && aboutSystem.cctvUrl !== null ? aboutSystem.cctvUrl : ''}
+                          value={aboutSystem.cctvUrl || localStorage.getItem('dbms-cctv-url') || ''}
                           onChange={(e) => setAboutSystem(prev => ({ ...prev, cctvUrl: e.target.value }))} />
                         <span className="settings-form-hint">ลิงก์นี้จะนำไปดึงสตรีมภาพสดในแท็บ Live Camera บนแดชบอร์ดหลัก</span>
                       </div>
