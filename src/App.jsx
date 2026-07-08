@@ -439,7 +439,7 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
           {/* HMI View Toggle Switch */}
           <div style={{
             position: 'absolute',
-            top: '12px',
+            bottom: '12px',
             right: '12px',
             zIndex: 20,
             display: 'flex',
