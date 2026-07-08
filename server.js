@@ -870,17 +870,19 @@ app.delete('/api/machines/:id', async (req, res) => {
 // ── Jobs (Sessions) ──────────────────────────────────────
 
 app.post('/api/jobs', async (req, res) => {
-  const { machineId, name } = req.body;
+  const { machineId, name, targetHours } = req.body;
   if (!machineId || !name || !name.trim()) {
     return res.status(400).json({ error: 'Machine ID and name are required' });
   }
 
+  const parsedTargetHours = Number(targetHours);
   const newJob = {
     id: 'job-' + Date.now(),
     machineId,
     name: name.trim(),
     createdAt: new Date().toISOString(),
     status: 'running',
+    targetHours: (!isNaN(parsedTargetHours) && parsedTargetHours > 0) ? parsedTargetHours : 48,
     data: []
   };
 
@@ -894,6 +896,33 @@ app.post('/api/jobs', async (req, res) => {
     const localDB = readLocalDB();
     localDB.jobs.push(newJob);
     writeLocalDB(localDB);
+  }
+
+  res.json(await getDB());
+});
+
+app.put('/api/jobs/:id/target-hours', async (req, res) => {
+  const { id } = req.params;
+  const { targetHours } = req.body;
+
+  const hoursNum = Number(targetHours);
+  if (isNaN(hoursNum) || hoursNum <= 0) {
+    return res.status(400).json({ error: 'Invalid target hours value' });
+  }
+
+  if (isCloud) {
+    try {
+      await db.collection(JOBS_COL).doc(id).update({ targetHours: hoursNum });
+    } catch (e) {
+      console.error('Firestore error updating target hours:', e);
+    }
+  } else {
+    const localDB = readLocalDB();
+    const job = localDB.jobs.find(j => j.id === id);
+    if (job) {
+      job.targetHours = hoursNum;
+      writeLocalDB(localDB);
+    }
   }
 
   res.json(await getDB());

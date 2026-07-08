@@ -2058,6 +2058,7 @@ function App() {
   const [showAddSessionModal, setShowAddSessionModal] = useState(false);
   const [newSessionName, setNewSessionName] = useState('');
   const [newSessionMachineId, setNewSessionMachineId] = useState('');
+  const [newSessionTargetHours, setNewSessionTargetHours] = useState(48);
 
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
   const [newMachineName, setNewMachineName] = useState('');
@@ -2697,6 +2698,7 @@ function App() {
     if (!currentMachineId) return alert("Please select or create a machine first.");
     setNewSessionName(`Session ${jobsForMachine.length + 1}`);
     setNewSessionMachineId(currentMachineId);
+    setNewSessionTargetHours(48);
     setShowAddSessionModal(true);
   };
 
@@ -2720,7 +2722,11 @@ function App() {
       const res = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ machineId: newSessionMachineId, name: newSessionName.trim() })
+        body: JSON.stringify({ 
+          machineId: newSessionMachineId, 
+          name: newSessionName.trim(),
+          targetHours: Number(newSessionTargetHours) || 48
+        })
       });
       if (!res.ok) {
         alert("ไม่สามารถสร้างงานใหม่ได้ กรุณาลองใหม่อีกครั้ง");
@@ -4679,6 +4685,7 @@ function App() {
                   onClick={() => {
                     setNewSessionName(`Session ${jobs.length + 1}`);
                     setNewSessionMachineId(currentMachineId || machines[0]?.id);
+                    setNewSessionTargetHours(48);
                     setNewSessionCustomerId('');
                     setNewSessionCustomerName('');
                     setNewSessionCustomerEmail('');
@@ -8225,6 +8232,50 @@ function App() {
                   </div>
                 </div>
 
+                {/* Step 1.5: Target Run Duration */}
+                <div style={{ marginTop: '1rem', background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <label className="modal-label" style={{ marginBottom: '8px', display: 'block', fontWeight: 600 }}>⏱️ ระยะเวลาเป้าหมายรอบรัน (Target Run Duration)</label>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        value={newSessionTargetHours}
+                        onChange={(e) => setNewSessionTargetHours(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="modal-input"
+                        style={{ width: '100px', padding: '8px 10px', height: '36px', textAlign: 'center' }}
+                        required
+                      />
+                      <span style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ชม. (Hours)</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {[24, 48, 72, 120].map(h => (
+                        <button
+                          key={h}
+                          type="button"
+                          onClick={() => setNewSessionTargetHours(h)}
+                          style={{
+                            padding: '6px 12px', fontSize: '0.8rem', fontWeight: 600,
+                            border: '1px solid var(--border-color)',
+                            background: newSessionTargetHours === h ? 'rgba(99,102,241,0.2)' : 'transparent',
+                            borderColor: newSessionTargetHours === h ? '#6366f1' : 'var(--border-color)',
+                            color: newSessionTargetHours === h ? 'white' : 'var(--text-secondary)',
+                            borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s ease',
+                            height: '36px'
+                          }}
+                        >
+                          {h} ชม.
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '6px', display: 'block' }}>
+                    * ใช้คำนวณและแสดงแถบความคืบหน้าความก้าวหน้าของรอบการรัน (Progress Bar) สำหรับผู้บริหารและทีมงาน
+                  </span>
+                </div>
+
+
                 {/* Step 2: Customer Assignment */}
                 <div className="modal-section">
                   <label className="modal-label">👥 ระบุลูกค้าผู้เข้าใช้งาน (Customer Assignment)</label>
@@ -8463,7 +8514,10 @@ function App() {
         const pv = (key, dp = 1) => typeof dataPoint[key] === 'number' ? dataPoint[key].toFixed(dp) : '—';
         const sp = (key, dp = 1) => typeof dataPoint[key] === 'number' ? dataPoint[key].toFixed(dp) : '—';
         const machine = machines.find(m => m.id === currentJob.machineId);
-        const cultureHrNow = chartData.length > 0 ? Number(chartData[chartData.length - 1].cultureHour || 0).toFixed(1) : '0.0';
+        const cultureHrNum = chartData.length > 0 ? Number(chartData[chartData.length - 1].cultureHour || 0) : 0;
+        const cultureHrNow = cultureHrNum.toFixed(1);
+        const targetHours = currentJob.targetHours || 48;
+        const progressPercent = Math.min(100, Math.max(0, (cultureHrNum / targetHours) * 100));
         const latestRemark = [...(currentJob.data || [])].reverse().find(r => r.remark && r.remark.trim());
         const metrics = [
           { label: 'Temperature', unit: '°C', pv: pv('temp_read', 1), sp: sp('temp_set', 1), color: '#ef4444', bg: 'rgba(239,68,68,0.08)', icon: '🌡️' },
@@ -8653,10 +8707,12 @@ function App() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Culture Time</div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#6366f1', fontVariantNumeric: 'tabular-nums' }}>
-                    {cultureHrNow} <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>h</span>
+                <div style={{ textAlign: 'right', minWidth: '140px' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Culture Progress ({progressPercent.toFixed(0)}%)
+                  </div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#6366f1', fontVariantNumeric: 'tabular-nums', marginTop: '2px' }}>
+                    {cultureHrNow} <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>/ {targetHours} h</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
@@ -8686,6 +8742,19 @@ function App() {
                   title="ออกจากโหมดนำเสนอ (ESC)"
                 >✕</button>
               </div>
+            </div>
+
+            {/* ── BATCH PROGRESS BAR (Full Width) ── */}
+            <div style={{
+              width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.05)',
+              position: 'relative', flexShrink: 0
+            }} title={`Progress: ${progressPercent.toFixed(1)}% (${cultureHrNow}h / ${targetHours}h)`}>
+              <div style={{
+                width: `${progressPercent}%`, height: '100%',
+                background: 'linear-gradient(90deg, #6366f1, #22c55e)',
+                boxShadow: '0 0 10px rgba(99, 102, 241, 0.5)',
+                transition: 'width 0.5s ease-out'
+              }} />
             </div>
 
             {/* ── MAIN BODY ── */}
