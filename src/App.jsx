@@ -3947,6 +3947,21 @@ function App() {
                 <span className="sidebar-badge">{jobs.length}</span>
               </div>
 
+              {/* Menu Presentation */}
+              <div
+                className={`sidebar-menu-item ${currentAppView === 'presentation' ? 'active' : ''}`}
+                onClick={() => {
+                  setCurrentAppView('presentation');
+                  setIsMobileMenuOpen(false);
+                }}
+                style={currentAppView === 'presentation' ? { background: 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(79,70,229,0.2))', borderLeft: '3px solid #7c3aed' } : {}}
+              >
+                <span className="sidebar-menu-link" style={{ color: currentAppView === 'presentation' ? '#a78bfa' : undefined }}>
+                  <span style={{ fontSize: 16 }}>🖥️</span>
+                  Presentation Mode
+                </span>
+              </div>
+
               {/* Menu Instruments */}
               <div
                 className={`sidebar-menu-item ${currentAppView === 'instruments' ? 'active' : ''}`}
@@ -4124,7 +4139,176 @@ function App() {
           <p><strong>Instrument / Machine:</strong> {currentMachine?.name || '-'}</p>
           <p><strong>Date Generated:</strong> {formatDateTime(new Date())}</p>
         </div>
-        {currentAppView === 'customers' ? (
+        {currentAppView === 'presentation' ? (
+          /* ══════════════════════════════════════════════════════
+             PRESENTATION HUB — เลือกโหมดก่อนนำเสนอ
+          ══════════════════════════════════════════════════════ */
+          <div style={{ padding: '2rem', maxWidth: '960px', margin: '0 auto' }}>
+            <header className="dashboard-header" style={{ marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span>🖥️</span> Presentation Mode
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
+                  เลือก Session และโหมดนำเสนอ จากนั้นกด Launch เพื่อเปิดเต็มจอ
+                </p>
+              </div>
+            </header>
+
+            {/* ── Session Selector ── */}
+            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+                📋 เลือก Session ที่ต้องการนำเสนอ
+              </h3>
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <select
+                  value={currentJobId || ''}
+                  onChange={e => {
+                    const job = jobs.find(j => j.id === e.target.value);
+                    if (job) {
+                      setCurrentJobId(job.id);
+                      setCurrentMachineId(job.machineId);
+                    }
+                  }}
+                  style={{
+                    flex: 1, minWidth: '220px', padding: '10px 14px',
+                    borderRadius: '8px', border: '1px solid var(--border-color)',
+                    background: 'var(--panel-bg)', color: 'var(--text-primary)',
+                    fontFamily: 'inherit', fontSize: '0.9rem'
+                  }}
+                >
+                  <option value="">— เลือก Session —</option>
+                  {jobs.map(j => {
+                    const m = machines.find(m => m.id === j.machineId);
+                    return <option key={j.id} value={j.id}>{m ? `[${m.name}] ` : ''}{j.name}</option>;
+                  })}
+                </select>
+                {currentJob && (
+                  <span style={{
+                    padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 700,
+                    background: currentJob.status === 'finished' ? 'rgba(34,197,94,0.12)' : 'rgba(99,102,241,0.15)',
+                    color: currentJob.status === 'finished' ? '#86efac' : '#818cf8',
+                    border: `1px solid ${currentJob.status === 'finished' ? 'rgba(34,197,94,0.3)' : 'rgba(99,102,241,0.3)'}`
+                  }}>
+                    {currentJob.status === 'finished' ? '✅ Finished' : '🟢 Running'} · {chartData.length} pts
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* ── Mode Cards ── */}
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-secondary)' }}>
+              เลือกโหมดนำเสนอ
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+
+              {/* Card 1: Live Dashboard */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(79,70,229,0.08))',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  borderRadius: '16px', padding: '1.5rem',
+                  cursor: currentJob ? 'pointer' : 'not-allowed',
+                  opacity: currentJob ? 1 : 0.45,
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={e => currentJob && (e.currentTarget.style.transform = 'translateY(-3px)', e.currentTarget.style.boxShadow = '0 12px 32px rgba(99,102,241,0.25)')}
+                onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '')}
+                onClick={() => currentJob && setIsPresentationMode(true)}
+              >
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
+                <h4 style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#a5b4fc' }}>Live Dashboard</h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  แสดง Metric Card ขนาดใหญ่ (TEMP, pH, DO, AGIT, AIR) พร้อมกราฟรวม เหมาะสำหรับจอ Monitor ห้องแล็บ
+                </p>
+                <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#6366f1', fontWeight: 600 }}>
+                  ⚡ Launch Fullscreen →
+                </div>
+              </div>
+
+              {/* Card 2: Comparison Chart */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(34,197,94,0.12), rgba(16,185,129,0.06))',
+                  border: '1px solid rgba(34,197,94,0.25)',
+                  borderRadius: '16px', padding: '1.5rem',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-3px)', e.currentTarget.style.boxShadow = '0 12px 32px rgba(34,197,94,0.2)')}
+                onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '')}
+                onClick={() => { setCurrentAppView('sessions'); setCombinedActiveTab('compare'); }}
+              >
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📈</div>
+                <h4 style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#86efac' }}>Comparison Chart</h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  เปรียบเทียบกราฟหลาย Session พร้อมกัน วิเคราะห์แนวโน้มข้ามรอบการผลิต
+                </p>
+                <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#22c55e', fontWeight: 600 }}>
+                  📊 เปิดหน้าเปรียบเทียบ →
+                </div>
+              </div>
+
+              {/* Card 3: Data Table */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(234,179,8,0.12), rgba(202,138,4,0.06))',
+                  border: '1px solid rgba(234,179,8,0.25)',
+                  borderRadius: '16px', padding: '1.5rem',
+                  cursor: currentJob ? 'pointer' : 'not-allowed',
+                  opacity: currentJob ? 1 : 0.45,
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={e => currentJob && (e.currentTarget.style.transform = 'translateY(-3px)', e.currentTarget.style.boxShadow = '0 12px 32px rgba(234,179,8,0.2)')}
+                onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '')}
+                onClick={() => { if (currentJob) { setCurrentAppView('monitoring'); setActiveTab('table'); } }}
+              >
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📋</div>
+                <h4 style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#fde047' }}>Data Table</h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  ตารางข้อมูลทุกจุดของ Session ที่เลือก พร้อม Export Excel / CSV / PDF
+                </p>
+                <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#eab308', fontWeight: 600 }}>
+                  📋 ดูตารางข้อมูล →
+                </div>
+              </div>
+
+              {/* Card 4: Session List */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(168,85,247,0.12), rgba(139,92,246,0.06))',
+                  border: '1px solid rgba(168,85,247,0.25)',
+                  borderRadius: '16px', padding: '1.5rem',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-3px)', e.currentTarget.style.boxShadow = '0 12px 32px rgba(168,85,247,0.2)')}
+                onMouseLeave={e => (e.currentTarget.style.transform = '', e.currentTarget.style.boxShadow = '')}
+                onClick={() => { setCurrentAppView('sessions'); setCombinedActiveTab('list'); }}
+              >
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🗂️</div>
+                <h4 style={{ fontWeight: 700, marginBottom: '0.4rem', color: '#d8b4fe' }}>Sessions Summary</h4>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  ตารางสรุปทุก Session พร้อมดาวน์โหลดรายงาน เหมาะสำหรับนำเสนอภาพรวมโครงการ
+                </p>
+                <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#a855f7', fontWeight: 600 }}>
+                  🗂️ ดูรายการ Sessions →
+                </div>
+              </div>
+
+            </div>
+
+            {!currentJob && (
+              <div style={{
+                marginTop: '1.5rem', padding: '1rem 1.5rem', borderRadius: '10px',
+                background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)',
+                color: '#fde047', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px'
+              }}>
+                ⚠️ กรุณาเลือก Session ด้านบนก่อน เพื่อเปิดใช้งานโหมด Live Dashboard และ Data Table
+              </div>
+            )}
+          </div>
+        ) : currentAppView === 'customers' ? (
           /* CUSTOMER DATA VIEW */
           <div className="customers-view">
             <header className="dashboard-header">
@@ -6121,7 +6305,7 @@ function App() {
                 )}
                 {currentJob && (
                   <button
-                    onClick={() => setIsPresentationMode(true)}
+                    onClick={() => setCurrentAppView('presentation')}
                     style={{
                       margin: 0,
                       background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
@@ -6140,7 +6324,7 @@ function App() {
                       whiteSpace: 'nowrap',
                       boxShadow: '0 0 12px rgba(124,58,237,0.4)'
                     }}
-                    title="เปิดโหมดนำเสนอจอใหญ่ (กด ESC เพื่อออก)"
+                    title="ไปหน้า Presentation Mode"
                   >
                     🖥️ Presentation
                   </button>
