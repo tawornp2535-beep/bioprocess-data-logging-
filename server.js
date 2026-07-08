@@ -3,8 +3,6 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import nodemailer from 'nodemailer';
-import PDFDocument from 'pdfkit';
 import dotenv from 'dotenv';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -597,18 +595,11 @@ app.post('/api/settings/update-password', async (req, res) => {
   res.json({ success: true });
 });
 
-const sanitizeSettings = (settings) => {
-  const publicSettings = { ...settings };
-  delete publicSettings.adminPassword;
-  if (publicSettings.emailSmtpPass) {
-    publicSettings.emailSmtpPass = '••••••••••••••••';
-  }
-  return publicSettings;
-};
-
 app.get('/api/settings', async (req, res) => {
   const settings = await getSettings();
-  res.json(sanitizeSettings(settings));
+  const publicSettings = { ...settings };
+  delete publicSettings.adminPassword;
+  res.json(publicSettings);
 });
 
 app.get('/api/storage-info', async (req, res) => {
@@ -751,7 +742,9 @@ app.post('/api/settings/update-about', async (req, res) => {
 
   await saveSettings(settings);
   
-  res.json({ success: true, settings: sanitizeSettings(settings) });
+  const publicSettings = { ...settings };
+  delete publicSettings.adminPassword;
+  res.json({ success: true, settings: publicSettings });
 });
 
 app.post('/api/settings/update-vvm', async (req, res) => {
@@ -766,39 +759,9 @@ app.post('/api/settings/update-vvm', async (req, res) => {
 
   await saveSettings(settings);
   
-  res.json({ success: true, settings: sanitizeSettings(settings) });
-});
-
-app.post('/api/settings/update-email', async (req, res) => {
-  const { 
-    emailSmtpHost, 
-    emailSmtpPort, 
-    emailSmtpSecure, 
-    emailSmtpUser, 
-    emailSmtpPass, 
-    emailSender, 
-    emailRecipients, 
-    emailEnabled 
-  } = req.body;
-  
-  const settings = await getSettings();
-  
-  settings.emailSmtpHost = (emailSmtpHost || '').trim();
-  settings.emailSmtpPort = parseInt(emailSmtpPort) || 465;
-  settings.emailSmtpSecure = emailSmtpSecure !== undefined ? emailSmtpSecure : true;
-  settings.emailSmtpUser = (emailSmtpUser || '').trim();
-  
-  if (emailSmtpPass && emailSmtpPass !== '••••••••••••••••') {
-    settings.emailSmtpPass = emailSmtpPass;
-  }
-  
-  settings.emailSender = (emailSender || '').trim();
-  settings.emailRecipients = (emailRecipients || '').trim();
-  settings.emailEnabled = emailEnabled !== undefined ? emailEnabled : false;
-  
-  await saveSettings(settings);
-  
-  res.json({ success: true, settings: sanitizeSettings(settings) });
+  const publicSettings = { ...settings };
+  delete publicSettings.adminPassword;
+  res.json({ success: true, settings: publicSettings });
 });
 
 // ── Machines ─────────────────────────────────────────────
@@ -1035,275 +998,25 @@ app.put('/api/jobs/:id/status', async (req, res) => {
 });
 
 // Finish a job permanently (cannot be restarted)
-const generatePDFBuffer = (job, machine, settings, stats, totalDurationMinutes, totalAirLiters) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
-      const chunks = [];
-      doc.on('data', (chunk) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', (err) => reject(err));
-      
-      // Font configuration for Thai language support
-      let fontPath = null;
-      if (process.platform === 'win32') {
-        const windowsFonts = [
-          'C:\\Windows\\Fonts\\tahoma.ttf',
-          'C:\\Windows\\Fonts\\arial.ttf',
-          'C:\\Windows\\Fonts\\browab.ttf',
-        ];
-        for (const f of windowsFonts) {
-          if (fs.existsSync(f)) {
-            fontPath = f;
-            break;
-          }
-        }
-      }
-      if (fontPath) {
-        doc.registerFont('ThaiFont', fontPath);
-        doc.font('ThaiFont');
-      }
-
-      // Title & Header
-      doc.fillColor('#1e293b').fontSize(22).text(settings.systemName || 'DBMS Bioprocess System', { align: 'center' });
-      doc.fontSize(10).fillColor('#64748b').text(`System Version: ${settings.systemVersion || 'v2.4.0'}`, { align: 'center' });
-      doc.moveDown();
-      
-      // Divider line
-      doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-      doc.moveDown();
-      
-      // Title
-      doc.fillColor('#0f172a').fontSize(14).text('BATCH SESSION REPORT (รายงานสรุปผลการหมัก)', { underline: true });
-      doc.moveDown(0.5);
-      
-      // Job details
-      const startY = doc.y;
-      doc.fontSize(10).fillColor('#334155');
-      doc.text(`Batch Name: ${job.name}`);
-      doc.text(`Machine / Vessel: ${machine ? machine.name : 'Unknown Machine'}`);
-      doc.text(`Status: Finished (เสร็จสิ้น)`);
-      doc.text(`Duration: ${(totalDurationMinutes / 60).toFixed(2)} hours (${Math.round(totalDurationMinutes)} min)`);
-      
-      doc.text(`Started At: ${job.startedAt ? new Date(job.startedAt).toLocaleString('th-TH') : '-'}`, 300, startY);
-      doc.text(`Finished At: ${job.finishedAt ? new Date(job.finishedAt).toLocaleString('th-TH') : '-'}`, 300, startY + 15);
-      doc.text(`Total Records: ${job.data ? job.data.length : 0}`, 300, startY + 30);
-      doc.text(`Total Air Consumed: ${totalAirLiters.toFixed(1)} Liters`, 300, startY + 45);
-      
-      doc.moveDown(2);
-      
-      // Statistics Table Title
-      doc.fillColor('#0f172a').fontSize(12).text('Telemetry Process Parameters Statistics (สถิติพารามิเตอร์)', { bold: true });
-      doc.moveDown(0.5);
-      
-      // Table Header
-      const tableY = doc.y;
-      doc.fillColor('#f8fafc').rect(50, tableY, 495, 20).fill();
-      doc.fillColor('#1e293b').fontSize(9);
-      doc.text('Parameter (พารามิเตอร์)', 60, tableY + 6);
-      doc.text('Min PV (ต่ำสุด)', 200, tableY + 6);
-      doc.text('Max PV (สูงสุด)', 300, tableY + 6);
-      doc.text('Average PV (เฉลี่ย)', 400, tableY + 6);
-      
-      // Table Rows
-      const rows = [
-        { label: 'Temperature (°C) - อุณหภูมิ', key: 'temp_read', fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-        { label: 'pH - ความเป็นกรดด่าง', key: 'ph_read', fmt: (v) => typeof v === 'number' ? v.toFixed(2) : v },
-        { label: 'DO (%) - ออกซิเจนละลาย', key: 'do_read', fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-        { label: 'Agitation (RPM) - ความเร็วรอบใบกวน', key: 'agit_read', fmt: (v) => typeof v === 'number' ? Math.round(v) : v },
-        { label: `Air Flow (${settings.airUnit === 'mlmin' ? 'mL/min' : 'L/min'}) - อัตราไหลลม`, key: 'air_read', fmt: (v) => typeof v === 'number' ? v.toFixed(1) : v },
-      ];
-      
-      let currentY = tableY + 20;
-      rows.forEach((r, idx) => {
-        if (idx % 2 === 1) {
-          doc.fillColor('#f8fafc').rect(50, currentY, 495, 20).fill();
-        }
-        doc.strokeColor('#e2e8f0').lineWidth(0.5).rect(50, currentY, 495, 20).stroke();
-        
-        doc.fillColor('#334155').fontSize(9);
-        doc.text(r.label, 60, currentY + 6);
-        
-        const s = stats[r.key];
-        doc.text(r.fmt(s.min), 200, currentY + 6);
-        doc.text(r.fmt(s.max), 300, currentY + 6);
-        doc.text(r.fmt(s.avg), 400, currentY + 6);
-        
-        currentY += 20;
-      });
-      
-      doc.y = currentY + 20;
-      
-      // Remarks Log
-      const remarks = (job.data || []).filter(row => row.remark && row.remark.trim() !== '');
-      if (remarks.length > 0) {
-        doc.fillColor('#0f172a').fontSize(12).text('Event Log & Remarks (หมายเหตุและเหตุการณ์)', { underline: true });
-        doc.moveDown(0.5);
-        
-        remarks.forEach(r => {
-          doc.fillColor('#334155').fontSize(9);
-          const timeStr = new Date(r.timestamp).toLocaleString('th-TH');
-          const hourStr = typeof r.cultureHour === 'number' ? `${r.cultureHour.toFixed(2)}h` : '';
-          doc.text(`[${timeStr}] (ชั่วโมง ${hourStr}): `, { bold: true, continued: true });
-          doc.text(r.remark);
-          doc.moveDown(0.2);
-        });
-      }
-      
-      doc.moveDown(2);
-      
-      // Footer
-      doc.fontSize(8).fillColor('#94a3b8').text('This is an automated report generated by the SCADA DBMS Bioprocess System.', { align: 'center' });
-      
-      doc.end();
-    } catch (err) {
-      reject(err);
-    }
-  });
-};
-
-const sendReportEmail = async (settings, pdfBuffer, jobName) => {
-  const transporter = nodemailer.createTransport({
-    host: settings.emailSmtpHost,
-    port: parseInt(settings.emailSmtpPort) || 465,
-    secure: settings.emailSmtpSecure !== undefined ? settings.emailSmtpSecure : true,
-    auth: {
-      user: settings.emailSmtpUser,
-      pass: settings.emailSmtpPass,
-    },
-  });
-  
-  const mailOptions = {
-    from: settings.emailSender || settings.emailSmtpUser,
-    to: settings.emailRecipients,
-    subject: `[DBMS Report] รายงานสรุปผลการหมักเซสชัน: ${jobName}`,
-    text: `เรียน ทีมงานวิศวกรรมข้อมูลชีวภาพ,\n\nเซสชันการหมัก "${jobName}" ได้สิ้นสุดกระบวนการเลี้ยงเชื้อเรียบร้อยแล้ว\n\nระบบได้สร้างรายงานสรุปผลกระบวนการ (PDF Report) และแนบมาพร้อมกับอีเมลฉบับนี้เพื่อใช้วิเคราะห์ผลต่อไป\n\nขอแสดงความนับถือ,\nระบบควบคุมและบันทึกข้อมูล SCADA DBMS`,
-    attachments: [
-      {
-        filename: `Report_Batch_${jobName.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`,
-        content: pdfBuffer,
-      }
-    ]
-  };
-  
-  return transporter.sendMail(mailOptions);
-};
-
-// Finish a job permanently (cannot be restarted)
 app.put('/api/jobs/:id/finish', async (req, res) => {
   const { id } = req.params;
   const finishedAt = new Date().toISOString();
 
-  let job = null;
-  let localDB = null;
-
   if (isCloud) {
     try {
       await db.collection(JOBS_COL).doc(id).update({ status: 'finished', finishedAt });
-      const doc = await db.collection(JOBS_COL).doc(id).get();
-      if (doc.exists) {
-        job = { id: doc.id, ...doc.data() };
-      }
     } catch (e) {
       console.error('Firestore error finishing job:', e);
       return res.status(500).json({ error: 'Failed to finish job' });
     }
   } else {
-    localDB = readLocalDB();
-    job = localDB.jobs.find(j => j.id === id);
+    const localDB = readLocalDB();
+    const job = localDB.jobs.find(j => j.id === id);
     if (job) {
       job.status = 'finished';
       job.finishedAt = finishedAt;
       writeLocalDB(localDB);
     }
-  }
-
-  // If job is found, trigger PDF generation & email notification asynchronously!
-  if (job) {
-    (async () => {
-      try {
-        const settings = await getSettings();
-        if (settings.emailEnabled && settings.emailRecipients && settings.emailSmtpHost) {
-          console.log(`📊 Processing automated PDF report & email for job: ${job.name}`);
-          
-          // Load machine
-          let machine = null;
-          if (isCloud) {
-            const mDoc = await db.collection(MACHINES_COL).doc(job.machineId).get();
-            if (mDoc.exists) machine = { id: mDoc.id, ...mDoc.data() };
-          } else {
-            machine = localDB.machines.find(m => m.id === job.machineId);
-          }
-          
-          // Calculate statistics
-          const dataPoints = job.data || [];
-          const stats = {};
-          const keys = ['temp_read', 'ph_read', 'do_read', 'agit_read', 'air_read'];
-          keys.forEach(k => {
-            stats[k] = { min: Infinity, max: -Infinity, avg: 0, sum: 0, count: 0 };
-          });
-          
-          dataPoints.forEach(row => {
-            keys.forEach(k => {
-              const val = parseFloat(row[k]);
-              if (!isNaN(val)) {
-                if (val < stats[k].min) stats[k].min = val;
-                if (val > stats[k].max) stats[k].max = val;
-                stats[k].sum += val;
-                stats[k].count++;
-              }
-            });
-          });
-          
-          keys.forEach(k => {
-            const s = stats[k];
-            if (s.count > 0) {
-              s.avg = s.sum / s.count;
-            } else {
-              s.min = '-';
-              s.max = '-';
-              s.avg = '-';
-            }
-          });
-          
-          // Total duration and air consumption
-          let totalDurationMinutes = 0;
-          let totalAirLiters = 0;
-          if (dataPoints.length > 1) {
-            const sortedPoints = [...dataPoints].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            const startT = new Date(sortedPoints[0].timestamp);
-            const endT = new Date(sortedPoints[sortedPoints.length - 1].timestamp);
-            totalDurationMinutes = (endT - startT) / (1000 * 60);
-            
-            for (let i = 0; i < sortedPoints.length - 1; i++) {
-              const p1 = sortedPoints[i];
-              const p2 = sortedPoints[i+1];
-              const t1 = new Date(p1.timestamp);
-              const t2 = new Date(p2.timestamp);
-              const diffMin = (t2 - t1) / (1000 * 60);
-              
-              const r1 = parseFloat(p1.air_read);
-              const r2 = parseFloat(p2.air_read);
-              const avgRate = (!isNaN(r1) && !isNaN(r2)) ? (r1 + r2) / 2 : (!isNaN(r1) ? r1 : (!isNaN(r2) ? r2 : 0));
-              const rateLmin = settings.airUnit === 'mlmin' ? avgRate / 1000 : avgRate;
-              
-              totalAirLiters += rateLmin * diffMin;
-            }
-          }
-          
-          // Generate PDF Buffer
-          const pdfBuffer = await generatePDFBuffer(job, machine, settings, stats, totalDurationMinutes, totalAirLiters);
-          
-          // Send Email
-          await sendReportEmail(settings, pdfBuffer, job.name);
-          console.log(`✅ Automated PDF report sent successfully to: ${settings.emailRecipients}`);
-        } else {
-          console.log(`ℹ️ Email notification is disabled or not configured.`);
-        }
-      } catch (err) {
-        console.error('❌ Failed to process automated PDF report or email:', err);
-      }
-    })();
   }
 
   res.json(await getDB());
