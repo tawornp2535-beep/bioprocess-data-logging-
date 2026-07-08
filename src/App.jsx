@@ -1818,6 +1818,13 @@ function App() {
   const [feedbackSuggestion, setFeedbackSuggestion] = useState('');
 
 
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('diagram'); // 'diagram' | 'dashboard' | 'combined' | 'table' | 'ai'
   const [isPresentationMode, setIsPresentationMode] = useState(false);
   const [presentationLayout, setPresentationLayout] = useState('chart'); // 'chart' | 'cctv'
@@ -8518,6 +8525,7 @@ function App() {
         const cultureHrNow = cultureHrNum.toFixed(1);
         const targetHours = currentJob.targetHours || 48;
         const progressPercent = Math.min(100, Math.max(0, (cultureHrNum / targetHours) * 100));
+        const isMobile = windowWidth <= 768;
         const latestRemark = [...(currentJob.data || [])].reverse().find(r => r.remark && r.remark.trim());
         const metrics = [
           { label: 'Temperature', unit: '°C', pv: pv('temp_read', 1), sp: sp('temp_set', 1), color: '#ef4444', bg: 'rgba(239,68,68,0.08)', icon: '🌡️' },
@@ -8654,39 +8662,69 @@ function App() {
           >
             {/* ── TOP BAR ── */}
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 28px',
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: isMobile ? '10px 14px' : '14px 28px',
               background: 'rgba(15,23,42,0.85)',
               borderBottom: '1px solid rgba(99,102,241,0.25)',
               backdropFilter: 'blur(12px)',
-              flexShrink: 0
+              flexShrink: 0,
+              gap: isMobile ? '12px' : '24px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <img src="/bioreactor.png" alt="logo" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-                <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    {machine?.name || 'Instrument'}
-                  </div>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.01em' }}>
-                    {currentJob.name}
+              {/* Row 1: Logo & Title (and close button on mobile) */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                width: isMobile ? '100%' : 'auto',
+                gap: '16px' 
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img src="/bioreactor.png" alt="logo" style={{ width: isMobile ? 28 : 36, height: isMobile ? 28 : 36, objectFit: 'contain' }} />
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                      {machine?.name || 'Instrument'}
+                    </div>
+                    <div style={{ fontSize: isMobile ? '1.1rem' : '1.3rem', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.01em' }}>
+                      {currentJob.name}
+                    </div>
                   </div>
                 </div>
+
+                {isMobile && (
+                  <button
+                    onClick={() => setIsPresentationMode(false)}
+                    style={{
+                      background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                      color: '#fca5a5', borderRadius: '8px', cursor: 'pointer',
+                      width: 32, height: 32, fontSize: '0.9rem', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', margin: 0
+                    }}
+                    title="ออกจากโหมดนำเสนอ"
+                  >✕</button>
+                )}
               </div>
 
-              {/* Layout Switcher (Chart vs CCTV) */}
+              {/* Row 2: Layout Switcher (Chart vs CCTV) */}
               <div style={{
                 display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.06)',
-                padding: '4px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)'
+                padding: '3px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)',
+                width: isMobile ? '100%' : 'auto',
+                justifyContent: isMobile ? 'center' : 'stretch'
               }}>
                 <button
                   onClick={() => setPresentationLayout('chart')}
                   style={{
-                    padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600,
+                    padding: isMobile ? '6px 0' : '6px 14px', fontSize: '0.8rem', fontWeight: 600,
                     borderRadius: '6px', border: 'none', cursor: 'pointer',
                     background: presentationLayout === 'chart' ? '#6366f1' : 'transparent',
                     color: presentationLayout === 'chart' ? 'white' : '#94a3b8',
                     transition: 'all 0.15s ease',
-                    margin: 0
+                    margin: 0,
+                    flex: isMobile ? 1 : 'none',
+                    textAlign: 'center'
                   }}
                 >
                   📈 Trend Chart
@@ -8694,54 +8732,88 @@ function App() {
                 <button
                   onClick={() => setPresentationLayout('cctv')}
                   style={{
-                    padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600,
+                    padding: isMobile ? '6px 0' : '6px 14px', fontSize: '0.8rem', fontWeight: 600,
                     borderRadius: '6px', border: 'none', cursor: 'pointer',
                     background: presentationLayout === 'cctv' ? '#6366f1' : 'transparent',
                     color: presentationLayout === 'cctv' ? 'white' : '#94a3b8',
                     transition: 'all 0.15s ease',
-                    margin: 0
+                    margin: 0,
+                    flex: isMobile ? 1 : 'none',
+                    textAlign: 'center'
                   }}
                 >
                   🎥 CCTV Live
                 </button>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                <div style={{ textAlign: 'right', minWidth: '140px' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Culture Progress ({progressPercent.toFixed(0)}%)
+              {/* Row 3: Metrics Info */}
+              {!isMobile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                  <div style={{ textAlign: 'right', minWidth: '140px' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Culture Progress ({progressPercent.toFixed(0)}%)
+                    </div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#6366f1', fontVariantNumeric: 'tabular-nums', marginTop: '2px' }}>
+                      {cultureHrNow} <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>/ {targetHours} h</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#6366f1', fontVariantNumeric: 'tabular-nums', marginTop: '2px' }}>
-                    {cultureHrNow} <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 600 }}>/ {targetHours} h</span>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Status</div>
+                    <div style={{
+                      fontSize: '0.9rem', fontWeight: 700, padding: '4px 14px', borderRadius: '20px',
+                      background: currentJob.status === 'finished' ? 'rgba(34,197,94,0.15)' : 'rgba(99,102,241,0.15)',
+                      color: currentJob.status === 'finished' ? '#86efac' : '#818cf8',
+                      border: `1px solid ${currentJob.status === 'finished' ? 'rgba(34,197,94,0.3)' : 'rgba(99,102,241,0.3)'}`,
+                      marginTop: '2px'
+                    }}>
+                      {currentJob.status === 'finished' ? '✅ Finished' : '🟢 Running'}
+                    </div>
                   </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Data Points</div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f1f5f9' }}>{chartData.length}</div>
+                  </div>
+                  <button
+                    onClick={() => setIsPresentationMode(false)}
+                    style={{
+                      background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                      color: '#fca5a5', borderRadius: '8px', cursor: 'pointer',
+                      width: 38, height: 38, fontSize: '1.1rem', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center'
+                    }}
+                    title="ออกจากโหมดนำเสนอ (ESC)"
+                  >✕</button>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Status</div>
+              )}
+
+              {/* Mobile-only compact metadata row */}
+              {isMobile && (
+                <div style={{ 
+                  display: 'flex', 
+                  width: '100%', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  paddingTop: '8px',
+                  fontSize: '0.8rem'
+                }}>
+                  <div>
+                    <span style={{ color: '#64748b' }}>Progress:</span>{' '}
+                    <strong style={{ color: '#6366f1' }}>{cultureHrNow}/{targetHours}h ({progressPercent.toFixed(0)}%)</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b' }}>Points:</span>{' '}
+                    <strong style={{ color: '#f1f5f9' }}>{chartData.length}</strong>
+                  </div>
                   <div style={{
-                    fontSize: '0.9rem', fontWeight: 700, padding: '4px 14px', borderRadius: '20px',
+                    fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px',
                     background: currentJob.status === 'finished' ? 'rgba(34,197,94,0.15)' : 'rgba(99,102,241,0.15)',
                     color: currentJob.status === 'finished' ? '#86efac' : '#818cf8',
-                    border: `1px solid ${currentJob.status === 'finished' ? 'rgba(34,197,94,0.3)' : 'rgba(99,102,241,0.3)'}`,
-                    marginTop: '2px'
                   }}>
-                    {currentJob.status === 'finished' ? '✅ Finished' : '🟢 Running'}
+                    {currentJob.status === 'finished' ? 'Finished' : 'Running'}
                   </div>
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Data Points</div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f1f5f9' }}>{chartData.length}</div>
-                </div>
-                <button
-                  onClick={() => setIsPresentationMode(false)}
-                  style={{
-                    background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-                    color: '#fca5a5', borderRadius: '8px', cursor: 'pointer',
-                    width: 38, height: 38, fontSize: '1.1rem', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center'
-                  }}
-                  title="ออกจากโหมดนำเสนอ (ESC)"
-                >✕</button>
-              </div>
+              )}
             </div>
 
             {/* ── BATCH PROGRESS BAR (Full Width) ── */}
@@ -8758,34 +8830,52 @@ function App() {
             </div>
 
             {/* ── MAIN BODY ── */}
-            <div style={{ flex: 1, display: 'flex', gap: '16px', padding: '16px 20px', overflow: 'hidden', minHeight: 0 }}>
+            <div style={{ 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '16px', 
+              padding: isMobile ? '12px' : '16px 20px', 
+              overflowY: isMobile ? 'auto' : 'hidden', 
+              minHeight: 0 
+            }}>
 
               {/* LEFT: Metric Cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '280px', flexShrink: 0 }}>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: isMobile ? 'row' : 'column',
+                flexWrap: isMobile ? 'wrap' : 'nowrap',
+                gap: '10px', 
+                width: isMobile ? '100%' : '280px', 
+                flexShrink: 0 
+              }}>
                 {metrics.map(m => (
                   <div key={m.label} style={{
                     background: m.bg,
                     border: `1px solid ${m.color}33`,
                     borderRadius: '14px',
-                    padding: '14px 18px',
-                    flex: 1,
+                    padding: isMobile ? '10px 14px' : '14px 18px',
+                    flex: isMobile ? '1 1 calc(50% - 6px)' : 1,
+                    minWidth: isMobile ? '135px' : 'auto',
+                    height: isMobile ? '105px' : 'auto',
                     display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                    position: 'relative', overflow: 'hidden'
+                    position: 'relative', overflow: 'hidden',
+                    boxSizing: 'border-box'
                   }}>
                     <div style={{
-                      position: 'absolute', right: -10, top: -10,
-                      fontSize: '4rem', opacity: 0.06
+                      position: 'absolute', right: -5, top: -5,
+                      fontSize: isMobile ? '2.8rem' : '4rem', opacity: 0.06
                     }}>{m.icon}</div>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>
                       {m.label}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '2.5rem', fontWeight: 900, color: m.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
+                      <span style={{ fontSize: isMobile ? '1.8rem' : '2.5rem', fontWeight: 900, color: m.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
                         {m.pv}
                       </span>
-                      <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>{m.unit}</span>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>{m.unit}</span>
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
                       SP: <span style={{ color: '#94a3b8', fontWeight: 600 }}>{m.sp} {m.unit}</span>
                     </div>
                   </div>
@@ -8793,7 +8883,15 @@ function App() {
               </div>
 
               {/* RIGHT: Chart or CCTV */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
+              <div style={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '12px', 
+                minWidth: 0,
+                width: '100%',
+                minHeight: isMobile ? '340px' : 'auto'
+              }}>
                 <div style={{
                   flex: 1, background: 'rgba(15,23,42,0.6)', borderRadius: '16px',
                   border: '1px solid rgba(99,102,241,0.15)', padding: presentationLayout === 'cctv' ? '8px' : '16px 8px 8px',
@@ -8835,11 +8933,18 @@ function App() {
                 </div>
 
                 {/* Bottom row: Remarks + Time */}
-                <div style={{ display: 'flex', gap: '12px', height: '58px', flexShrink: 0 }}>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: '12px', 
+                  height: isMobile ? 'auto' : '58px', 
+                  flexShrink: 0 
+                }}>
                   <div style={{
                     flex: 1, background: 'rgba(15,23,42,0.6)', borderRadius: '12px',
                     border: '1px solid rgba(255,255,255,0.06)', padding: '10px 16px',
-                    display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden'
+                    display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden',
+                    height: isMobile ? '50px' : 'auto'
                   }}>
                     <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>📌</span>
                     <div style={{ minWidth: 0 }}>
@@ -8852,27 +8957,38 @@ function App() {
                   <div style={{
                     background: 'rgba(15,23,42,0.6)', borderRadius: '12px',
                     border: '1px solid rgba(99,102,241,0.15)', padding: '10px 20px',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    display: 'flex', 
+                    flexDirection: isMobile ? 'row' : 'column', 
+                    alignItems: 'center', 
+                    justifyContent: isMobile ? 'space-between' : 'center', 
+                    flexShrink: 0,
+                    height: isMobile ? '45px' : 'auto'
                   }}>
-                    <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>เวลาปัจจุบัน</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#818cf8', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: isMobile ? '8px' : '0' }}>เวลาปัจจุบัน</div>
+                    <div style={{ fontSize: isMobile ? '1.1rem' : '1.2rem', fontWeight: 800, color: '#818cf8', fontVariantNumeric: 'tabular-nums' }}>
                       {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </div>
                   </div>
                 </div>
+              </div>
             </div>
-          </div>
 
           {/* ── FOOTER ── */}
           <div style={{
-            padding: '8px 28px',
+            padding: isMobile ? '8px 14px' : '8px 28px',
             background: 'rgba(15,23,42,0.7)',
             borderTop: '1px solid rgba(255,255,255,0.04)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            fontSize: '0.72rem', color: '#475569', flexShrink: 0
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            fontSize: '0.68rem', 
+            color: '#475569', 
+            flexShrink: 0,
+            gap: isMobile ? '4px' : '0'
           }}>
             <span>SCADA DBMS Bioprocess System · {aboutSystem?.systemVersion || 'v2.5.0'}</span>
-            <span style={{ color: '#6366f1' }}>กด ESC เพื่อออกจากโหมดนำเสนอ</span>
+            {!isMobile && <span style={{ color: '#6366f1' }}>กด ESC เพื่อออกจากโหมดนำเสนอ</span>}
             <span>{new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
           </div>
         </div>
