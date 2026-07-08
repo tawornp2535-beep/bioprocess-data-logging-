@@ -1194,7 +1194,38 @@ const BSTRDiagram = ({ dataPoint, chartData, isReplaying, isReplayingPlaying, jo
                     [OFFLINE SIMULATION FEED]
                   </div>
                 </div>
-              ) : cctvUrl.includes('ezviz') || cctvUrl.includes('iframe') || cctvUrl.includes('.html') ? (
+              ) : (cctvUrl.includes('youtube.com') || cctvUrl.includes('youtu.be')) ? (() => {
+                // Case B: YouTube Video / Livestream — auto-convert to embed URL
+                let videoId = '';
+                try {
+                  const url = new URL(cctvUrl);
+                  if (url.hostname === 'youtu.be') {
+                    videoId = url.pathname.slice(1).split('?')[0];
+                  } else if (url.pathname.includes('/live/')) {
+                    videoId = url.pathname.split('/live/')[1].split('?')[0];
+                  } else {
+                    videoId = url.searchParams.get('v') || '';
+                  }
+                } catch (_) {}
+                const embedUrl = videoId
+                  ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=1&rel=0`
+                  : '';
+                return embedUrl ? (
+                  <iframe
+                    src={embedUrl}
+                    width="100%"
+                    height="100%"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ border: 'none', background: '#000' }}
+                    onError={() => setCctvError(true)}
+                  />
+                ) : (
+                  <div style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
+                    ไม่สามารถแยก Video ID จาก YouTube URL ได้ กรุณาตรวจสอบลิงก์อีกครั้ง
+                  </div>
+                );
+              })() : cctvUrl.includes('ezviz') || cctvUrl.includes('iframe') || cctvUrl.includes('.html') ? (
                 // Case C: EZVIZ / Cloud Iframe Player
                 <iframe
                   src={cctvUrl}
