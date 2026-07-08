@@ -218,3 +218,25 @@
   background-color: var(--accent-red) !important;
   color: #ffffff !important;
 }
+
+/* ==========================================================================
+   Responsive Table Wrapper
+   ========================================================================== */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid var(--table-border);
+}
+
+.table-responsive .data-table {
+  min-width: 700px; /* ป้องกันตารางยุบตัวเกินไปบนหน้าจอเล็ก */
+}
+
+/* Fix combined-jobs-view container ไม่ให้ content ล้นออกนอกขอบ */
+.combined-jobs-view {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
