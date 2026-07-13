@@ -6312,7 +6312,7 @@ function App() {
                         }}
                       >
                         {showStandby ? 'Standby' : (currentJob?.name || '—')}
-                        {userRole === 'admin' && currentJob && !showStandby && (
+                        {userRole === 'admin' && currentJob && (
                           <button
                             onClick={() => {
                               setTempJobName(currentJob.name);
