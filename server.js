@@ -976,6 +976,35 @@ app.put('/api/jobs/:id/target-hours', async (req, res) => {
   res.json(await getDB());
 });
 
+app.put('/api/jobs/:id/name', async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  if (isCloud) {
+    try {
+      await db.collection(JOBS_COL).doc(id).update({ name: name.trim() });
+    } catch (e) {
+      console.error('Firestore error updating session name:', e);
+      return res.status(500).json({ error: 'Failed to update session name' });
+    }
+  } else {
+    const localDB = readLocalDB();
+    const job = localDB.jobs.find(j => j.id === id);
+    if (job) {
+      job.name = name.trim();
+      writeLocalDB(localDB);
+    } else {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+  }
+
+  res.json(await getDB());
+});
+
 app.delete('/api/jobs/:id', async (req, res) => {
   const { id } = req.params;
 

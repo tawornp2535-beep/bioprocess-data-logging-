@@ -1694,6 +1694,11 @@ function App() {
   const [activeCustomerJobId, setActiveCustomerJobId] = useState(() => {
     return localStorage.getItem('bioprocess-customer-job-id') || null;
   });
+  const [editingMachineId, setEditingMachineId] = useState('');
+  const [editingMachineName, setEditingMachineName] = useState('');
+  const [isEditingJobName, setIsEditingJobName] = useState(false);
+  const [tempJobName, setTempJobName] = useState('');
+
   // Message shown on login screen when session expires
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(null);
   const [hasFetchedDB, setHasFetchedDB] = useState(false);
@@ -1713,10 +1718,6 @@ function App() {
   });
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [showEditMachineModal, setShowEditMachineModal] = useState(false);
-  const [editingMachineId, setEditingMachineId] = useState('');
-  const [editingMachineName, setEditingMachineName] = useState('');
-
-  
 
   // PWA Install Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -2826,6 +2827,31 @@ function App() {
 
     } catch (err) {
       console.error("Error creating job:", err);
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+    }
+  };
+
+  const saveJobName = async (jobId, newName) => {
+    if (!newName || !newName.trim()) {
+      alert("กรุณากรอกชื่อรอบรัน");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/name`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        applyDBUpdate(data);
+        setIsEditingJobName(false);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || "ไม่สามารถแก้ไขชื่อรอบรันได้");
+      }
+    } catch (err) {
+      console.error("Error updating job name:", err);
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     }
   };
@@ -6220,9 +6246,99 @@ function App() {
 
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     📁 <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>รอบรัน:</span>{' '}
-                    <span style={{ color: showStandby ? 'var(--text-secondary)' : 'var(--accent-blue)' }}>
-                      {showStandby ? 'Standby' : (currentJob?.name || '—')}
-                    </span>
+                    {isEditingJobName ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                          type="text"
+                          value={tempJobName}
+                          onChange={(e) => setTempJobName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveJobName(currentJob.id, tempJobName);
+                            if (e.key === 'Escape') setIsEditingJobName(false);
+                          }}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid var(--accent-blue)',
+                            borderRadius: '6px',
+                            color: 'white',
+                            padding: '2px 8px',
+                            fontSize: '0.95rem',
+                            outline: 'none',
+                            width: '180px',
+                            boxShadow: '0 0 8px rgba(0, 240, 255, 0.2)'
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => saveJobName(currentJob.id, tempJobName)}
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(124, 58, 237, 0.2))',
+                            border: '1px solid rgba(0, 240, 255, 0.4)',
+                            borderRadius: '6px',
+                            color: '#00f0ff',
+                            padding: '3px 8px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          บันทึก
+                        </button>
+                        <button
+                          onClick={() => setIsEditingJobName(false)}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '6px',
+                            color: '#fca5a5',
+                            padding: '3px 8px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        style={{
+                          color: showStandby ? 'var(--text-secondary)' : 'var(--accent-blue)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {showStandby ? 'Standby' : (currentJob?.name || '—')}
+                        {userRole === 'admin' && currentJob && !showStandby && (
+                          <button
+                            onClick={() => {
+                              setTempJobName(currentJob.name);
+                              setIsEditingJobName(true);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-secondary)',
+                              cursor: 'pointer',
+                              padding: '2px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              opacity: 0.6,
+                              transition: 'opacity 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                            onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
+                            title="แก้ไขชื่อรอบรัน"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                        )}
+                      </span>
+                    )}
                   </h2>
                 </div>
 
