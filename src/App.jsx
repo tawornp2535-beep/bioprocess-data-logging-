@@ -1702,6 +1702,7 @@ function App() {
   // Message shown on login screen when session expires
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(null);
   const [hasFetchedDB, setHasFetchedDB] = useState(false);
+  const [isCloud, setIsCloud] = useState(true);
 
   // Developer & System Info states
   const [aboutSystem, setAboutSystem] = useState({
@@ -2607,6 +2608,9 @@ function App() {
     setCustomers(data.customers);
     if (data.feedbacks) {
       setFeedbacks(data.feedbacks);
+    }
+    if (data.hasOwnProperty('isCloud')) {
+      setIsCloud(data.isCloud !== false);
     }
   };
 
@@ -4204,6 +4208,31 @@ function App() {
 
       {/* MAIN CONTENT */}
       <main className="main-content">
+        {!isCloud && (
+          <div style={{
+            background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95))',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <strong>ระบบโควตาฐานข้อมูล Google Firestore เต็มชั่วคราว (Quota Limit Exceeded)</strong>
+              <div style={{ fontWeight: 400, opacity: 0.9, marginTop: '2px', fontSize: '0.85rem' }}>
+                ข้อมูลใหม่ที่กรอกหลังจากนี้จะถูกบันทึกชั่วคราวเท่านั้น และจะสูญหายหากมีการรีสตาร์ทหรืออัปเกรดระบบ โดยโควตาคลาวด์จะรีเซ็ตอัตโนมัติเวลาประมาณ 13:00 - 14:00 น. ของทุกวัน
+              </div>
+            </div>
+          </div>
+        )}
         {/* Print-only Header */}
         <div className="print-only-header">
           <h1>Bioprocess Data Report</h1>

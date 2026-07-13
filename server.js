@@ -629,7 +629,8 @@ app.get('/api/db', async (req, res) => {
   const dbData = await getDB();
   res.json({
     ...dbData,
-    activeUsers: activeUsersList
+    activeUsers: activeUsersList,
+    isCloud
   });
 });
 
