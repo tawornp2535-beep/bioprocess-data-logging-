@@ -139,7 +139,124 @@ let dbCache = null; // Cache database object
 let cacheLastFetched = 0; // Timestamp of last fetch
 const CACHE_TTL_MS = 30000; // Cache duration 30 seconds
 let startupError = null;
+let dbReadCount = 0;
+let dbWriteCount = 0;
+let lastQuotaResetDate = new Date().toDateString();
 
+const checkQuotaReset = () => {
+  const today = new Date().toDateString();
+  if (today !== lastQuotaResetDate) {
+    dbReadCount = 0;
+    dbWriteCount = 0;
+    lastQuotaResetDate = today;
+  }
+};
+
+const setupFirestoreProxy = (fdb) => {
+  if (!fdb) return fdb;
+  
+  const QUOTA_FILE = path.join(__dirname, 'quota-usage.json');
+  try {
+    if (fs.existsSync(QUOTA_FILE)) {
+      const data = JSON.parse(fs.readFileSync(QUOTA_FILE, 'utf-8'));
+      if (data.date === new Date().toDateString()) {
+        dbReadCount = data.reads || 0;
+        dbWriteCount = data.writes || 0;
+      }
+    }
+  } catch (e) {}
+
+  const saveQuotaToFile = () => {
+    try {
+      fs.writeFileSync(QUOTA_FILE, JSON.stringify({
+        date: new Date().toDateString(),
+        reads: dbReadCount,
+        writes: dbWriteCount
+      }), 'utf-8');
+    } catch (e) {}
+  };
+
+  const originalCollection = fdb.collection;
+  fdb.collection = function(...args) {
+    const colRef = originalCollection.apply(this, args);
+    
+    const originalGet = colRef.get;
+    colRef.get = async function(...getArgs) {
+      checkQuotaReset();
+      dbReadCount += 1;
+      saveQuotaToFile();
+      try {
+        const res = await originalGet.apply(this, getArgs);
+        if (res && res.size !== undefined) {
+          dbReadCount += res.size;
+          saveQuotaToFile();
+        }
+        return res;
+      } catch (err) {
+        throw err;
+      }
+    };
+    
+    const originalDoc = colRef.doc;
+    fdb.collection = originalCollection; // prevent infinite loop recursion
+    colRef.doc = function(...docArgs) {
+      const docRef = originalDoc.apply(this, docArgs);
+      
+      const originalDocGet = docRef.get;
+      docRef.get = async function(...dgArgs) {
+        checkQuotaReset();
+        dbReadCount += 1;
+        saveQuotaToFile();
+        return await originalDocGet.apply(this, dgArgs);
+      };
+      
+      const originalSet = docRef.set;
+      docRef.set = async function(...setArgs) {
+        checkQuotaReset();
+        dbWriteCount += 1;
+        saveQuotaToFile();
+        return await originalSet.apply(this, setArgs);
+      };
+      
+      const originalUpdate = docRef.update;
+      docRef.update = async function(...upArgs) {
+        checkQuotaReset();
+        dbWriteCount += 1;
+        saveQuotaToFile();
+        return await originalUpdate.apply(this, upArgs);
+      };
+      
+      const originalDelete = docRef.delete;
+      docRef.delete = async function(...delArgs) {
+        checkQuotaReset();
+        dbWriteCount += 1;
+        saveQuotaToFile();
+        return await originalDelete.apply(this, delArgs);
+      };
+      
+      return docRef;
+    };
+    
+    // restore originalCollection
+    fdb.collection = originalCollection;
+    return colRef;
+  };
+  
+  const originalBatch = fdb.batch;
+  fdb.batch = function() {
+    const batch = originalBatch.apply(this);
+    const originalCommit = batch.commit;
+    batch.commit = async function(...commitArgs) {
+      checkQuotaReset();
+      dbWriteCount += 1; 
+      saveQuotaToFile();
+      return await originalCommit.apply(this, commitArgs);
+    };
+    return batch;
+  };
+
+  return fdb;
+};
 
 // Try to initialize Firebase Admin SDK
 const SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '';
@@ -152,7 +269,7 @@ if (SERVICE_ACCOUNT_JSON) {
       credential: cert(serviceAccount),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
     });
-    db = getFirestore('default');
+    db = setupFirestoreProxy(getFirestore('default'));
     isCloud = true;
     console.log('✅ Successfully connected to Firebase Firestore (Cloud Database) via Environment Variable.');
   } catch (err) {
@@ -167,7 +284,7 @@ if (SERVICE_ACCOUNT_JSON) {
       credential: cert(serviceAccount),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
     });
-    db = getFirestore('default');
+    db = setupFirestoreProxy(getFirestore('default'));
     isCloud = true;
     console.log('✅ Successfully connected to Firebase Firestore (Cloud Database).');
   } catch (err) {
@@ -752,6 +869,12 @@ app.get('/api/storage-info', async (req, res) => {
   return res.json({
     isCloud,
     isStorageCloud,
+    firestoreQuota: {
+      readsUsed: dbReadCount,
+      readsLimit: 50000,
+      writesUsed: dbWriteCount,
+      writesLimit: 20000
+    },
     storage: {
       usedBytes,
       freeLimitBytes: cloudStorageFreeLimit,

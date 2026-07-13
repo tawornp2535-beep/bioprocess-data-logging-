@@ -5307,7 +5307,7 @@ function App() {
 
               {/* === TAB 2: FIREBASE CLOUD === */}
               {settingsTab === 'firebase' && (
-                <div className="settings-panel-grid">
+                <div className="settings-panel-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
                   <div className="glass-panel settings-card">
                     <div className="settings-card-header">
                       <span className="settings-card-icon" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>☁️</span>
@@ -5393,6 +5393,69 @@ function App() {
                       </div>
                     )}
                   </div>
+
+                  {/* === NEW: FIRESTORE OPERATIONS QUOTA CARD === */}
+                  {storageInfo && storageInfo.firestoreQuota && (
+                    <div className="glass-panel settings-card" style={{ height: '100%' }}>
+                      <div className="settings-card-header">
+                        <span className="settings-card-icon" style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}>🔥</span>
+                        <div>
+                          <h3>Firestore Operations Quota</h3>
+                          <p>จำนวนครั้งการอ่านและเขียนฐานข้อมูลออนไลน์</p>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
+                        {/* Reads Quota */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
+                            <span>📖 จำนวนครั้งการอ่าน (Reads)</span>
+                            <span style={{ color: storageInfo.firestoreQuota.readsUsed >= storageInfo.firestoreQuota.readsLimit ? '#ef4444' : '#fbbf24' }}>
+                              {storageInfo.firestoreQuota.readsUsed.toLocaleString()} / {storageInfo.firestoreQuota.readsLimit.toLocaleString()}
+                            </span>
+                          </div>
+                          <div style={{ height: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${Math.min(100, (storageInfo.firestoreQuota.readsUsed / storageInfo.firestoreQuota.readsLimit) * 100)}%`,
+                              background: storageInfo.firestoreQuota.readsUsed >= storageInfo.firestoreQuota.readsLimit ? '#ef4444' : 'linear-gradient(90deg, #10b981, #fbbf24)',
+                              borderRadius: '6px',
+                              transition: 'width 0.5s ease-out'
+                            }} />
+                          </div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                            นับทุกครั้งที่เปิดดูตารางประวัติ, โหลดกราฟ และเปิด Dashboard (จำกัดฟรี 50,000 ครั้ง/วัน)
+                          </div>
+                        </div>
+
+                        {/* Writes Quota */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600 }}>
+                            <span>✍️ จำนวนครั้งการเขียน (Writes)</span>
+                            <span style={{ color: storageInfo.firestoreQuota.writesUsed >= storageInfo.firestoreQuota.writesLimit ? '#ef4444' : '#fbbf24' }}>
+                              {storageInfo.firestoreQuota.writesUsed.toLocaleString()} / {storageInfo.firestoreQuota.writesLimit.toLocaleString()}
+                            </span>
+                          </div>
+                          <div style={{ height: '12px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${Math.min(100, (storageInfo.firestoreQuota.writesUsed / storageInfo.firestoreQuota.writesLimit) * 100)}%`,
+                              background: storageInfo.firestoreQuota.writesUsed >= storageInfo.firestoreQuota.writesLimit ? '#ef4444' : 'linear-gradient(90deg, #10b981, #fbbf24)',
+                              borderRadius: '6px',
+                              transition: 'width 0.5s ease-out'
+                            }} />
+                          </div>
+                          <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                            นับทุกครั้งที่กดบันทึกพารามิเตอร์ HMI ใหม่, สร้างรอบรัน หรือเปลี่ยนชื่อเครื่อง (จำกัดฟรี 20,000 ครั้ง/วัน)
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '10px', lineHeight: '1.4' }}>
+                          💡 <strong>ข้อแนะนำ:</strong> โควตาจำนวนครั้งนี้เป็นโควตาฟรีจาก Firebase และจะทำการ **รีเซ็ตเป็น 0 อัตโนมัติทุกวันเวลา 13:00 - 14:00 น.** (ตามเวลาไทย)
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
