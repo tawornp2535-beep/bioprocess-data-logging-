@@ -493,7 +493,20 @@ const saveSettings = async (settings) => {
 
 // Health check endpoint (used to keep server active via Uptime monitoring pings)
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+  let firebaseProjectId = null;
+  const SERVICE_ACCOUNT_JSON = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '';
+  if (SERVICE_ACCOUNT_JSON) {
+    try {
+      const sa = JSON.parse(SERVICE_ACCOUNT_JSON);
+      firebaseProjectId = sa.project_id;
+    } catch (e) {}
+  }
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    isCloud,
+    firebaseProjectId
+  });
 });
 
 // Endpoint to check recent incoming pings/requests (useful for debugging UptimeRobot)
