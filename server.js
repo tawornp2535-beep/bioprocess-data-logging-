@@ -138,6 +138,7 @@ let db = null; // Firestore database reference
 let dbCache = null; // Cache database object
 let cacheLastFetched = 0; // Timestamp of last fetch
 const CACHE_TTL_MS = 30000; // Cache duration 30 seconds
+let startupError = null;
 
 
 // Try to initialize Firebase Admin SDK
@@ -186,6 +187,7 @@ if (isCloud) {
     console.log('✅ Firestore connection and quota verified successfully.');
   } catch (err) {
     console.error('❌ Firestore connection test failed (possibly out of quota or offline). Falling back to local db.json. Error:', err.message);
+    startupError = err.message;
     isCloud = false;
     db = null;
   }
@@ -505,7 +507,8 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     time: new Date().toISOString(),
     isCloud,
-    firebaseProjectId
+    firebaseProjectId,
+    startupError
   });
 });
 
