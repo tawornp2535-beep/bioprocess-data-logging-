@@ -1,4 +1,4 @@
-FROM node:18-slim AS build
+FROM node:20-slim AS build
 WORKDIR /app
 
 # Install dependencies (including dev deps for Vite build)
@@ -9,7 +9,7 @@ RUN npm ci --silent
 COPY . .
 RUN npm run build
 
-FROM node:18-slim AS prod
+FROM node:20-slim AS prod
 WORKDIR /app
 
 # Copy only production deps
