@@ -31,6 +31,12 @@ const recentRequests = [];
 
 // Request logging middleware
 app.use((req, res, next) => {
+  // Invalidate database cache on write operations (POST, PUT, DELETE, PATCH)
+  if (req.method !== 'GET') {
+    dbCache = null;
+    cacheLastFetched = 0;
+  }
+
   const userAgent = req.headers['user-agent'] || 'Unknown';
   recentRequests.push({
     time: new Date().toISOString(),
@@ -129,6 +135,10 @@ const normalizeDateTime = (dateInput, timeInput) => {
 // ──────────────────────────────────────────────────────────
 let isCloud = false;
 let db = null; // Firestore database reference
+let dbCache = null; // Cache database object
+let cacheLastFetched = 0; // Timestamp of last fetch
+const CACHE_TTL_MS = 30000; // Cache duration 30 seconds
+
 
 // Try to initialize Firebase Admin SDK
 const SERVICE_ACCOUNT_PATH = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '';
@@ -337,6 +347,11 @@ const migrateDataPoints = (jobs) => {
 // Unified Data Fetch
 // ──────────────────────────────────────────────────────────
 const getDB = async () => {
+  const now = Date.now();
+  if (dbCache && (now - cacheLastFetched < CACHE_TTL_MS)) {
+    return dbCache;
+  }
+
   if (isCloud) {
     try {
       let machines = await getCollection(MACHINES_COL);
@@ -373,10 +388,15 @@ const getDB = async () => {
         console.log('✅ Firestore timezone migration completed successfully.');
       }
 
-      return { machines, jobs, customers, feedbacks };
+      dbCache = { machines, jobs, customers, feedbacks };
+      cacheLastFetched = Date.now();
+      return dbCache;
     } catch (e) {
       console.error('Error reading Firestore, falling back to local file:', e);
-      return readLocalDB();
+      const localDB = readLocalDB();
+      dbCache = localDB;
+      cacheLastFetched = Date.now();
+      return localDB;
     }
   } else {
     const localDB = readLocalDB();
@@ -385,6 +405,8 @@ const getDB = async () => {
       console.log('⚡ Detected old data points with timezone offset bugs. Migrating local db.json...');
       writeLocalDB(localDB);
     }
+    dbCache = localDB;
+    cacheLastFetched = Date.now();
     return localDB;
   }
 };

@@ -2197,12 +2197,34 @@ function App() {
     }
   }, []);
 
-  // Poll server for real-time synchronization across multiple users
+  // Poll server for real-time synchronization across multiple users (Optimized with Visibility detection)
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchDB(false);
-    }, 5000);
-    return () => clearInterval(interval);
+    let interval;
+    const startPolling = () => {
+      interval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          fetchDB(false);
+        }
+      }, 10000); // Poll every 10 seconds
+    };
+
+    startPolling();
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        clearInterval(interval);
+        fetchDB(false); // Fetch immediately on tab focus
+        startPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [currentMachineId, currentJobId, userRole]);
 
   // Active Customer Session Expiry Check
