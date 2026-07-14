@@ -2207,7 +2207,7 @@ function App() {
         if (document.visibilityState === 'visible') {
           fetchDB(false);
         }
-      }, 10000); // Poll every 10 seconds
+      }, 20000); // Poll every 20 seconds
     };
 
     startPolling();

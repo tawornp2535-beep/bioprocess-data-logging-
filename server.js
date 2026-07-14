@@ -33,8 +33,7 @@ const recentRequests = [];
 app.use((req, res, next) => {
   // Invalidate database cache on write operations (POST, PUT, DELETE, PATCH)
   if (req.method !== 'GET') {
-    dbCache = null;
-    cacheLastFetched = 0;
+    invalidateCache();
   }
 
   const userAgent = req.headers['user-agent'] || 'Unknown';
@@ -136,8 +135,35 @@ const normalizeDateTime = (dateInput, timeInput) => {
 let isCloud = false;
 let db = null; // Firestore database reference
 let dbCache = null; // Cache database object
-let cacheLastFetched = 0; // Timestamp of last fetch
-const CACHE_TTL_MS = 30000; // Cache duration 30 seconds
+let machinesCache = null;
+let machinesLastFetched = 0;
+const MACHINES_TTL_MS = 300000; // 5 minutes cache for machines (rarely changes)
+
+let customersCache = null;
+let customersLastFetched = 0;
+const CUSTOMERS_TTL_MS = 300000; // 5 minutes cache for customers (rarely changes)
+
+let feedbacksCache = null;
+let feedbacksLastFetched = 0;
+const FEEDBACKS_TTL_MS = 300000; // 5 minutes cache for feedbacks (rarely changes)
+
+let jobsCache = null;
+let jobsLastFetched = 0;
+const JOBS_TTL_MS = 45000; // 45 seconds cache for jobs (updates during runs)
+
+let hasMigratedTimezones = false;
+
+const invalidateCache = () => {
+  dbCache = null;
+  machinesCache = null;
+  machinesLastFetched = 0;
+  customersCache = null;
+  customersLastFetched = 0;
+  feedbacksCache = null;
+  feedbacksLastFetched = 0;
+  jobsCache = null;
+  jobsLastFetched = 0;
+};
 let startupError = null;
 let dbReadCount = 0;
 let dbWriteCount = 0;
@@ -463,58 +489,7 @@ const migrateDataPoints = (jobs) => {
 // Unified Data Fetch
 // ──────────────────────────────────────────────────────────
 const getDB = async () => {
-  const now = Date.now();
-  if (dbCache && (now - cacheLastFetched < CACHE_TTL_MS)) {
-    return dbCache;
-  }
-
-  if (isCloud) {
-    try {
-      let machines = await getCollection(MACHINES_COL);
-      let jobs = await getCollection(JOBS_COL);
-      let customers = await getCollection(CUSTOMERS_COL);
-      let feedbacks = await getCollection(FEEDBACKS_COL);
-
-      // Seed cloud database if empty
-      if (machines.length === 0) {
-        const defaultMachine = { id: 'm1', name: 'Bioreactor 1' };
-        const defaultJob = {
-          id: 'job-initial',
-          machineId: 'm1',
-          name: 'Default Session',
-          createdAt: new Date().toISOString(),
-          data: []
-        };
-        await db.collection(MACHINES_COL).doc('m1').set(defaultMachine);
-        await db.collection(JOBS_COL).doc('job-initial').set(defaultJob);
-
-        machines = [defaultMachine];
-        jobs = [defaultJob];
-      }
-
-      // Run timezone migration on loaded Firestore jobs
-      const migrated = migrateDataPoints(jobs);
-      if (migrated) {
-        console.log('⚡ Detected old data points with timezone offset bugs. Migrating Firestore documents...');
-        const batch = db.batch();
-        for (const job of jobs) {
-          batch.set(db.collection(JOBS_COL).doc(job.id), job);
-        }
-        await batch.commit();
-        console.log('✅ Firestore timezone migration completed successfully.');
-      }
-
-      dbCache = { machines, jobs, customers, feedbacks };
-      cacheLastFetched = Date.now();
-      return dbCache;
-    } catch (e) {
-      console.error('Error reading Firestore, falling back to local file:', e);
-      const localDB = readLocalDB();
-      dbCache = localDB;
-      cacheLastFetched = Date.now();
-      return localDB;
-    }
-  } else {
+  if (!isCloud) {
     const localDB = readLocalDB();
     const migrated = migrateDataPoints(localDB.jobs);
     if (migrated) {
@@ -522,7 +497,85 @@ const getDB = async () => {
       writeLocalDB(localDB);
     }
     dbCache = localDB;
-    cacheLastFetched = Date.now();
+    return localDB;
+  }
+
+  const now = Date.now();
+  let machines = machinesCache;
+  let jobs = jobsCache;
+  let customers = customersCache;
+  let feedbacks = feedbacksCache;
+
+  try {
+    // Fetch machines if expired or null (5 minutes cache)
+    if (!machinesCache || (now - machinesLastFetched >= MACHINES_TTL_MS)) {
+      machines = await getCollection(MACHINES_COL);
+      machinesCache = machines;
+      machinesLastFetched = now;
+    }
+
+    // Fetch jobs if expired or null (45 seconds cache)
+    if (!jobsCache || (now - jobsLastFetched >= JOBS_TTL_MS)) {
+      jobs = await getCollection(JOBS_COL);
+
+      // Run timezone migration on loaded Firestore jobs ONLY ONCE on startup
+      if (!hasMigratedTimezones) {
+        const migrated = migrateDataPoints(jobs);
+        if (migrated) {
+          console.log('⚡ Detected old data points with timezone offset bugs. Migrating Firestore documents...');
+          const batch = db.batch();
+          for (const job of jobs) {
+            batch.set(db.collection(JOBS_COL).doc(job.id), job);
+          }
+          await batch.commit();
+          console.log('✅ Firestore timezone migration completed successfully.');
+        }
+        hasMigratedTimezones = true;
+      }
+
+      jobsCache = jobs;
+      jobsLastFetched = now;
+    }
+
+    // Fetch customers if expired or null (5 minutes cache)
+    if (!customersCache || (now - customersLastFetched >= CUSTOMERS_TTL_MS)) {
+      customers = await getCollection(CUSTOMERS_COL);
+      customersCache = customers;
+      customersLastFetched = now;
+    }
+
+    // Fetch feedbacks if expired or null (5 minutes cache)
+    if (!feedbacksCache || (now - feedbacksLastFetched >= FEEDBACKS_TTL_MS)) {
+      feedbacks = await getCollection(FEEDBACKS_COL);
+      feedbacksCache = feedbacks;
+      feedbacksLastFetched = now;
+    }
+
+    // Seed cloud database if empty
+    if (machines.length === 0) {
+      const defaultMachine = { id: 'm1', name: 'Bioreactor 1' };
+      const defaultJob = {
+        id: 'job-initial',
+        machineId: 'm1',
+        name: 'Default Session',
+        createdAt: new Date().toISOString(),
+        data: []
+      };
+      await db.collection(MACHINES_COL).doc('m1').set(defaultMachine);
+      await db.collection(JOBS_COL).doc('job-initial').set(defaultJob);
+
+      machines = [defaultMachine];
+      jobs = [defaultJob];
+      machinesCache = machines;
+      jobsCache = jobs;
+    }
+
+    dbCache = { machines, jobs, customers, feedbacks };
+    return dbCache;
+  } catch (e) {
+    console.error('Error reading Firestore, falling back to local file:', e);
+    const localDB = readLocalDB();
+    dbCache = localDB;
     return localDB;
   }
 };
