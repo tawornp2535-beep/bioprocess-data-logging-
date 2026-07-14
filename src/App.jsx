@@ -2441,10 +2441,10 @@ function App() {
   } : lastDataPoint;
 
   useEffect(() => {
-    if (activeTab === 'settings') {
+    if (currentAppView === 'settings') {
       fetchStorageInfo();
     }
-  }, [activeTab]);
+  }, [currentAppView]);
 
   // Enforce customer constraints: lock into active customer job and machine
   useEffect(() => {

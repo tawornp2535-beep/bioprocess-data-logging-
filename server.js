@@ -198,7 +198,6 @@ const setupFirestoreProxy = (fdb) => {
     };
     
     const originalDoc = colRef.doc;
-    fdb.collection = originalCollection; // prevent infinite loop recursion
     colRef.doc = function(...docArgs) {
       const docRef = originalDoc.apply(this, docArgs);
       
@@ -237,8 +236,6 @@ const setupFirestoreProxy = (fdb) => {
       return docRef;
     };
     
-    // restore originalCollection
-    fdb.collection = originalCollection;
     return colRef;
   };
   

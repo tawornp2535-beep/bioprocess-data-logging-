@@ -1,13 +1,13 @@
 @echo off
-title Bioprocess Logging System
-echo Starting server and launching app...
+title Bioprocess Logging System - Online
+echo Opening Bioprocess Logging System (Online)...
 echo --------------------------------------------------
-echo *** Please keep this window open while using the application. ***
+echo Connecting to: https://bioprocess-data-logging-fgou.onrender.com
 echo --------------------------------------------------
 echo.
 
-REM Open the web browser
-start "" "http://localhost:5174/"
+REM Open the live Render server directly (no local server needed)
+start "" "https://bioprocess-data-logging-fgou.onrender.com"
 
-REM Run the dev server
-npm run dev
+echo Browser opened! You can close this window now.
+pause
