@@ -2199,12 +2199,46 @@ function App() {
     }
   }, []);
 
-  // Poll server for real-time synchronization across multiple users (Optimized with Visibility detection)
+  const [isInactive, setIsInactive] = useState(false);
+
+  // Inactivity Detection: Pause polling after 10 minutes of no user interaction
   useEffect(() => {
+    if (!userRole || isInactive) return;
+
+    let timeoutId;
+    const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsInactive(true);
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [userRole, isInactive]);
+
+  // Poll server for real-time synchronization across multiple users (Optimized with Visibility & Inactivity detection)
+  useEffect(() => {
+    if (isInactive) return; // Do not setup polling if user is inactive
+
     let interval;
     const startPolling = () => {
       interval = setInterval(() => {
-        if (document.visibilityState === 'visible') {
+        if (document.visibilityState === 'visible' && !isInactive) {
           fetchDB(false);
         }
       }, 20000); // Poll every 20 seconds
@@ -2217,7 +2251,9 @@ function App() {
         clearInterval(interval);
       } else {
         clearInterval(interval);
-        fetchDB(false); // Fetch immediately on tab focus
+        if (!isInactive) {
+          fetchDB(false); // Fetch immediately on tab focus
+        }
         startPolling();
       }
     };
@@ -2227,7 +2263,7 @@ function App() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [currentMachineId, currentJobId, userRole]);
+  }, [currentMachineId, currentJobId, userRole, isInactive]);
 
   // Active Customer Session Expiry Check
   useEffect(() => {
@@ -9369,6 +9405,77 @@ function App() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Inactivity Overlay Modal */}
+      {isInactive && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '1.5rem'
+        }}>
+          <div className="glass-panel" style={{
+            padding: '2.5rem 2rem',
+            maxWidth: '480px',
+            width: '100%',
+            textAlign: 'center',
+            background: 'rgba(30, 41, 59, 0.95)',
+            border: '1px solid rgba(251, 191, 36, 0.3)',
+            borderRadius: '16px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.25rem'
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'rgba(251, 191, 36, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '2.25rem',
+              color: '#fbbf24',
+              marginBottom: '0.25rem'
+            }}>
+              ⏳
+            </div>
+            <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#f8fafc' }}>
+              หยุดอัปเดตข้อมูลชั่วคราว
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#94a3b8', lineHeight: '1.6' }}>
+              เนื่องจากไม่มีการใช้งานระบบเป็นเวลาเกิน 10 นาที ระบบได้หยุดดึงข้อมูลอัตโนมัติชั่วคราวเพื่อประหยัดโควต้าการอ่านฐานข้อมูลคลาวด์ครับ
+            </p>
+            <button
+              className="btn btn-primary"
+              style={{
+                margin: '0.5rem 0 0 0',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                fontSize: '0.95rem',
+                fontWeight: 600
+              }}
+              onClick={() => {
+                setIsInactive(false);
+                fetchDB(false);
+              }}
+            >
+              🔄 ดึงข้อมูลต่อ (Resume Updates)
+            </button>
           </div>
         </div>
       )}
