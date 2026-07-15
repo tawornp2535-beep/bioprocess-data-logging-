@@ -1117,8 +1117,7 @@ body {
 }
 
 /* Print-Only CSS Styles */
-.print-only-header,
-#batch-report-print {
+.print-only-header {
   display: none;
 }
 
@@ -1135,21 +1134,13 @@ body {
     color: #000000 !important;
   }
 
-  /* Hide the entire standard layout and modals during print */
-  .app-layout,
-  .modal-backdrop,
-  .login-overlay {
-    display: none !important;
-  }
-
-  /* Show only our special print container */
-  #batch-report-print {
+  /* Reset layout constraints for printing */
+  .app-layout {
     display: block !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    width: 100% !important;
     height: auto !important;
+    width: 100% !important;
     overflow: visible !important;
+    background: #ffffff !important;
   }
 
   .main-content {
