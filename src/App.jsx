@@ -3583,77 +3583,100 @@ function App() {
   };
 
   const exportToExcel = (passedJob) => {
-    const job = (passedJob && passedJob.id && passedJob.data) ? passedJob : currentJob;
-    if (!job || !job.data || job.data.length === 0) {
-      alert("ไม่มีข้อมูลที่จะส่งออก!");
-      return;
-    }
-
-    const mappedRows = mapDataPointsToLiters(job.data, job).sort((a, b) => {
-      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-      return bTime - aTime;
-    });
-    const rowsToExport = mappedRows;
-
-    const sheetData = rowsToExport.map(row => {
-      const ai_s = row.air_set !== undefined ? row.air_set : row.air;
-      const ai_r = row.air_read !== undefined ? row.air_read : row.air;
-      return {
-        'Date': row.timestamp ? toYYYYMMDD(row.timestamp) : (row.date || ''),
-        'Time': row.timestamp ? toHHMM(row.timestamp) : (row.time || ''),
-        'Culture Hour (Hr)': row.cultureHour !== undefined ? row.cultureHour : getElapsedHours(job, row.timestamp),
-        'Temp SV (°C)': row.temp_set !== undefined ? row.temp_set : row.temp,
-        'Temp PV (°C)': row.temp_read !== undefined ? row.temp_read : row.temp,
-        'pH SV': row.ph_set !== undefined ? row.ph_set : row.ph,
-        'pH PV': row.ph_read !== undefined ? row.ph_read : row.ph,
-        'DO SV (%)': row.do_set !== undefined ? row.do_set : row.do,
-        'DO PV (%)': row.do_read !== undefined ? row.do_read : row.do,
-        'Agit SV (RPM)': row.agit_set !== undefined ? row.agit_set : row.agit,
-        'Agit PV (RPM)': row.agit_read !== undefined ? row.agit_read : row.agit,
-        'Air Flow SV (L/M)': ai_s,
-        'Air Flow PV (L/M)': ai_r,
-        'Volume SV (L)': row.level_set !== undefined && row.level_set !== null ? (typeof row.level_set === 'number' ? parseFloat(row.level_set.toFixed(1)) : row.level_set) : '-',
-        'Volume PV (L)': row.level_read !== undefined && row.level_read !== null ? (typeof row.level_read === 'number' ? parseFloat(row.level_read.toFixed(1)) : row.level_read) : '-',
-        'Air Out SV (L/M)': row.air_out_set !== undefined && row.air_out_set !== null ? row.air_out_set : parseFloat(((ai_s || 0) * 0.96).toFixed(2)),
-        'Air Out PV (L/M)': row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((ai_r || 0) * 0.96).toFixed(2)),
-        'Heat SV (%)': row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0,
-        'Heat PV (%)': row.heat_read !== undefined && row.heat_read !== null ? row.heat_read : 0.0,
-        'Remarks': row.remark !== undefined ? row.remark : '',
-        'Image URL': row.imageUrl || ''
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(sheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Bioprocess Records");
-
-    // Auto-fit column widths
-    const max_widths = [];
-    sheetData.forEach(row => {
-      Object.keys(row).forEach((key, colIndex) => {
-        const value = row[key] ? String(row[key]) : "";
-        const length = Math.max(value.length, key.length) + 2;
-        max_widths[colIndex] = Math.max(max_widths[colIndex] || 0, length);
-      });
-    });
-    worksheet['!cols'] = max_widths.map(w => ({ wch: w }));
-
-    const safeName = job.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    XLSX.writeFile(workbook, `${safeName}_data.xlsx`);
-    if (userRole === 'customer') {
-      const alreadyReviewed = feedbacks.some(f => f.jobId === job.id);
-      if (!alreadyReviewed) {
-        setTimeout(() => {
-          setFeedbackJobId(job.id);
-          setFeedbackScores(initScores());
-          setFeedbackChannels([]);
-          setFeedbackTools([]);
-          setFeedbackSuggestion('');
-          setFeedbackSuccess(false);
-          setShowFeedbackModal(true);
-        }, 800);
+    try {
+      const job = (passedJob && passedJob.id && passedJob.data) ? passedJob : currentJob;
+      if (!job || !job.data || job.data.length === 0) {
+        alert("ไม่มีข้อมูลที่จะส่งออก!");
+        return;
       }
+
+      // Safe Excel library resolve
+      if (!XLSX) {
+        throw new Error("XLSX library is not loaded/defined");
+      }
+      const xlsxLib = XLSX.utils ? XLSX : (XLSX.default || {});
+      if (!xlsxLib.utils || !xlsxLib.writeFile) {
+        throw new Error("XLSX.utils or XLSX.writeFile is not defined. XLSX keys: " + Object.keys(XLSX).join(', '));
+      }
+
+      const mappedRows = mapDataPointsToLiters(job.data, job).sort((a, b) => {
+        const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return bTime - aTime;
+      });
+      const rowsToExport = mappedRows;
+
+      const sheetData = rowsToExport.map(row => {
+        const ai_s = row.air_set !== undefined ? row.air_set : row.air;
+        const ai_r = row.air_read !== undefined ? row.air_read : row.air;
+        return {
+          'Date': row.timestamp ? toYYYYMMDD(row.timestamp) : (row.date || ''),
+          'Time': row.timestamp ? toHHMM(row.timestamp) : (row.time || ''),
+          'Culture Hour (Hr)': row.cultureHour !== undefined ? row.cultureHour : getElapsedHours(job, row.timestamp),
+          'Temp SV (°C)': row.temp_set !== undefined ? row.temp_set : row.temp,
+          'Temp PV (°C)': row.temp_read !== undefined ? row.temp_read : row.temp,
+          'pH SV': row.ph_set !== undefined ? row.ph_set : row.ph,
+          'pH PV': row.ph_read !== undefined ? row.ph_read : row.ph,
+          'DO SV (%)': row.do_set !== undefined ? row.do_set : row.do,
+          'DO PV (%)': row.do_read !== undefined ? row.do_read : row.do,
+          'Agit SV (RPM)': row.agit_set !== undefined ? row.agit_set : row.agit,
+          'Agit PV (RPM)': row.agit_read !== undefined ? row.agit_read : row.agit,
+          'Air Flow SV (L/M)': ai_s,
+          'Air Flow PV (L/M)': ai_r,
+          'Volume SV (L)': row.level_set !== undefined && row.level_set !== null ? (typeof row.level_set === 'number' ? parseFloat(row.level_set.toFixed(1)) : row.level_set) : '-',
+          'Volume PV (L)': row.level_read !== undefined && row.level_read !== null ? (typeof row.level_read === 'number' ? parseFloat(row.level_read.toFixed(1)) : row.level_read) : '-',
+          'Air Out SV (L/M)': row.air_out_set !== undefined && row.air_out_set !== null ? row.air_out_set : parseFloat(((ai_s || 0) * 0.96).toFixed(2)),
+          'Air Out PV (L/M)': row.air_out_read !== undefined && row.air_out_read !== null ? row.air_out_read : parseFloat(((ai_r || 0) * 0.96).toFixed(2)),
+          'Heat SV (%)': row.heat_set !== undefined && row.heat_set !== null ? row.heat_set : 0.0,
+          'Heat PV (%)': row.heat_read !== undefined && row.heat_read !== null ? row.heat_read : 0.0,
+          'Remarks': row.remark !== undefined ? row.remark : '',
+          'Image URL': row.imageUrl || ''
+        };
+      });
+
+      const worksheet = xlsxLib.utils.json_to_sheet(sheetData);
+      const workbook = xlsxLib.utils.book_new();
+      xlsxLib.utils.book_append_sheet(workbook, worksheet, "Bioprocess Records");
+
+      // Auto-fit column widths
+      const max_widths = [];
+      sheetData.forEach(row => {
+        Object.keys(row).forEach((key, colIndex) => {
+          const value = row[key] ? String(row[key]) : "";
+          const length = Math.max(value.length, key.length) + 2;
+          max_widths[colIndex] = Math.max(max_widths[colIndex] || 0, length);
+        });
+      });
+      worksheet['!cols'] = max_widths.map(w => ({ wch: w }));
+
+      const safeName = job.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      xlsxLib.writeFile(workbook, `${safeName}_data.xlsx`);
+      if (userRole === 'customer') {
+        const alreadyReviewed = feedbacks.some(f => f.jobId === job.id);
+        if (!alreadyReviewed) {
+          setTimeout(() => {
+            setFeedbackJobId(job.id);
+            setFeedbackScores(initScores());
+            setFeedbackChannels([]);
+            setFeedbackTools([]);
+            setFeedbackSuggestion('');
+            setFeedbackSuccess(false);
+            setShowFeedbackModal(true);
+          }, 800);
+        }
+      }
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการส่งออก Excel: " + err.message);
+      console.error("Export Excel error:", err);
+      // Post error back to server
+      fetch('/api/client-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: "Excel Export Crash: " + err.message,
+          stack: err.stack || ''
+        })
+      }).catch(() => {});
     }
   };
 

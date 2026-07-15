@@ -6,6 +6,31 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>DBMS</title>
+  <script>
+    window.addEventListener('error', (event) => {
+      fetch('/api/client-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: event.message || 'Error occurred',
+          filename: event.filename || '',
+          lineno: event.lineno || '',
+          colno: event.colno || '',
+          stack: event.error ? event.error.stack : ''
+        })
+      }).catch(() => {});
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      fetch('/api/client-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: event.reason ? (event.reason.message || String(event.reason)) : 'Unhandled Rejection',
+          stack: event.reason && event.reason.stack ? event.reason.stack : ''
+        })
+      }).catch(() => {});
+    });
+  </script>
 
   <!-- Google Fonts for Executive Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

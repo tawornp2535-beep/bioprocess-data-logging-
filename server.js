@@ -813,6 +813,15 @@ app.post('/api/settings/verify-password', async (req, res) => {
   }
 });
 
+app.post('/api/client-error', (req, res) => {
+  const { message, filename, lineno, colno, stack } = req.body;
+  console.log(`\x1b[31m[CLIENT ERROR]\x1b[0m ${message} at ${filename}:${lineno}:${colno}`);
+  if (stack) {
+    console.log(`\x1b[31m[CLIENT STACK]\x1b[0m ${stack}`);
+  }
+  res.json({ success: true });
+});
+
 app.post('/api/settings/update-password', async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const settings = await getSettings();
