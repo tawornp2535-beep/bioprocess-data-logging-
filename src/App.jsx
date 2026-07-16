@@ -1638,6 +1638,94 @@ const defaultJob = {
   data: []
 };
 
+const StandbyScreen = ({ currentMachine, currentJob, onCreateNewRun, onViewHistory, onViewAllSessions, activeUsersCount }) => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (dt) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+  };
+
+  const formatDate = (dt) => {
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return dt.toLocaleDateString('th-TH', options);
+  };
+
+  return (
+    <div className="standby-screen-container">
+      <div className="standby-status-indicator">
+        <div className="standby-glow-ring"></div>
+        <div className="standby-pulse-dot">💤</div>
+      </div>
+      
+      <h2 className="standby-title">โหมดสแตนด์บาย (System Standby)</h2>
+      <p className="standby-subtitle">
+        ไม่มีการรันเครื่องในรอบรันปัจจุบัน และไม่มีการเรียกดูข้อมูลย้อนหลัง ระบบพร้อมทำงานและคอยบันทึกข้อมูล
+      </p>
+
+      <div className="standby-clock">
+        {formatTime(time)}
+      </div>
+      <div className="standby-date">
+        {formatDate(time)}
+      </div>
+
+      <div className="standby-cards-grid">
+        <div className="standby-action-card" onClick={onCreateNewRun}>
+          <div className="standby-card-icon green">
+            <PlusCircle size={22} />
+          </div>
+          <h3 className="standby-card-title">เริ่มรอบรันใหม่</h3>
+          <p className="standby-card-desc">
+            สร้างรอบการรันเพื่อเริ่มการทำงาน บันทึกค่าเซนเซอร์ และพล็อตแนวโน้มแบบเรียลไทม์
+          </p>
+        </div>
+
+        {currentJob && (
+          <div className="standby-action-card" onClick={onViewHistory}>
+            <div className="standby-card-icon blue">
+              <FolderOpen size={22} />
+            </div>
+            <h3 className="standby-card-title">ดูข้อมูลรอบรันล่าสุด</h3>
+            <p className="standby-card-desc">
+              เรียกดูและวิเคราะห์ประวัติข้อมูลรอบล่าสุด "{currentJob.name}" เพื่อเปรียบเทียบหรือตรวจสอบ
+            </p>
+          </div>
+        )}
+
+        <div className="standby-action-card" onClick={onViewAllSessions}>
+          <div className="standby-card-icon orange">
+            <Folder size={22} />
+          </div>
+          <h3 className="standby-card-title">รอบรันทั้งหมด</h3>
+          <p className="standby-card-desc">
+            ค้นหาและจัดการประวัติการรันเครื่องย้อนหลังทั้งหมดของระบบ หรือดาวน์โหลดรายงาน Excel
+          </p>
+        </div>
+      </div>
+
+      <div className="standby-system-stats">
+        <div className="standby-stat-item">
+          🖥️ เครื่องมือ: <strong style={{ color: 'var(--text-primary)' }}>{currentMachine?.name || '—'}</strong>
+        </div>
+        <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', height: '14px', alignSelf: 'center' }}></div>
+        <div className="standby-stat-item">
+          👥 ออนไลน์: <strong style={{ color: 'var(--text-primary)' }}>{activeUsersCount} คน</strong>
+        </div>
+        <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)', height: '14px', alignSelf: 'center' }}></div>
+        <div className="standby-stat-item">
+          🟢 สถานะ DB: <strong style={{ color: '#10b981' }}>ปกติ (Online)</strong>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   // Helper: normalize time strings or Date to HH:MM for <input type="time">
   const pad2 = (n) => String(n).padStart(2, '0');
@@ -2536,7 +2624,7 @@ function App() {
     return getElapsedHours(currentJob, editingRowData.timestamp);
   };
   const lastDataPoint = chartData.length > 0 ? chartData[chartData.length - 1] : null;
-  const showStandby = currentJob?.status === 'finished' && !isViewingHistory && userRole !== 'customer';
+  const showStandby = (!currentJob || currentJob?.status === 'finished') && !isViewingHistory && userRole !== 'customer';
   const lastDataPointForDisplay = (showStandby || !lastDataPoint) ? {
     temp_set: 0, temp_read: 0, temp: 0,
     ph_set: 0, ph_read: 0, ph: 0,
@@ -6568,7 +6656,7 @@ function App() {
                   </h2>
                 </div>
 
-                {currentJob && (
+                {currentJob && !showStandby && (
                   <div className="nav-tabs" style={{ margin: 0 }}>
                     <button
                       className={`nav-tab ${activeTab === 'diagram' ? 'active' : ''}`}
@@ -6692,7 +6780,7 @@ function App() {
 
 
             {/* Global Parameter Visibility Selector Bar */}
-            {currentJob && (
+            {currentJob && !showStandby && (
               <div className="glass-panel" style={{ padding: '0.75rem 1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   ⚙️ แสดงค่าพารามิเตอร์:
@@ -6744,7 +6832,16 @@ function App() {
 
 
 
-            {!currentJob ? (
+            {showStandby ? (
+              <StandbyScreen
+                currentMachine={currentMachine}
+                currentJob={currentJob}
+                onCreateNewRun={createNewJob}
+                onViewHistory={() => setIsViewingHistory(true)}
+                onViewAllSessions={() => setCurrentAppView('sessions')}
+                activeUsersCount={activeUsers.length}
+              />
+            ) : !currentJob ? (
               <div className="glass-panel empty-state">
                 <h2>Select or create a session to start.</h2>
               </div>

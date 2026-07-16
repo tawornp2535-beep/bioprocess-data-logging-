@@ -2442,3 +2442,204 @@ body {
   animation: inlet-air-flow 1s infinite linear;
   filter: drop-shadow(0 0 3px #10b981);
 }
+
+/* ==========================================================================
+   Standby Mode Dashboard Screen Styles
+   ========================================================================== */
+.standby-screen-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  padding: 3rem 2rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  backdrop-filter: blur(15px);
+  margin-top: 1rem;
+  text-align: center;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.5s ease;
+}
+
+.standby-status-indicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.standby-glow-ring {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(0, 240, 255, 0.15);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+  animation: pulse-ring 2.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.standby-pulse-dot {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00f0ff, #3b82f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+  color: #fff;
+  font-size: 1.5rem;
+}
+
+.standby-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #fff 30%, var(--accent-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
+}
+
+.standby-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 500px;
+  line-height: 1.5;
+  margin-bottom: 2.5rem;
+}
+
+.standby-clock {
+  font-family: 'Courier New', monospace;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #00f0ff;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  margin-bottom: 1.5rem;
+  display: inline-block;
+}
+
+.standby-date {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 3rem;
+  font-weight: 500;
+}
+
+.standby-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 800px;
+  margin-top: 1rem;
+}
+
+.standby-action-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.standby-action-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent-blue);
+  box-shadow: 0 8px 25px rgba(0, 240, 255, 0.15);
+}
+
+.standby-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.standby-card-icon.blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+}
+
+.standby-action-card:hover .standby-card-icon.blue {
+  background: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+.standby-card-icon.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.standby-action-card:hover .standby-card-icon.green {
+  background: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+}
+
+.standby-card-icon.orange {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.standby-action-card:hover .standby-card-icon.orange {
+  background: rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+}
+
+.standby-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.standby-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.standby-system-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 3rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.standby-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.65); opacity: 0; }
+  50% { opacity: 0.6; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
