@@ -135,21 +135,23 @@ const normalizeDateTime = (dateInput, timeInput) => {
 let isCloud = false;
 let db = null; // Firestore database reference
 let dbCache = null; // Cache database object
+let isFirestoreActive = true; // Tracks if Firestore is currently reachable
+
 let machinesCache = null;
 let machinesLastFetched = 0;
-const MACHINES_TTL_MS = 300000; // 5 minutes cache for machines (rarely changes)
+const MACHINES_TTL_MS = 1800000; // 30 minutes cache for machines (rarely changes)
 
 let customersCache = null;
 let customersLastFetched = 0;
-const CUSTOMERS_TTL_MS = 300000; // 5 minutes cache for customers (rarely changes)
+const CUSTOMERS_TTL_MS = 1800000; // 30 minutes cache for customers (rarely changes)
 
 let feedbacksCache = null;
 let feedbacksLastFetched = 0;
-const FEEDBACKS_TTL_MS = 300000; // 5 minutes cache for feedbacks (rarely changes)
+const FEEDBACKS_TTL_MS = 1800000; // 30 minutes cache for feedbacks (rarely changes)
 
 let jobsCache = null;
 let jobsLastFetched = 0;
-const JOBS_TTL_MS = 45000; // 45 seconds cache for jobs (updates during runs)
+const JOBS_TTL_MS = 600000; // 10 minutes cache for jobs (updates during runs)
 
 let hasMigratedTimezones = false;
 
@@ -325,11 +327,11 @@ if (isCloud) {
   try {
     await db.collection('machines').limit(1).get();
     console.log('✅ Firestore connection and quota verified successfully.');
+    isFirestoreActive = true;
   } catch (err) {
-    console.error('❌ Firestore connection test failed (possibly out of quota or offline). Falling back to local db.json. Error:', err.message);
+    console.error('❌ Firestore connection test failed (possibly out of quota or offline). Will retry dynamically during requests. Error:', err.message);
     startupError = err.message;
-    isCloud = false;
-    db = null;
+    isFirestoreActive = false;
   }
 }
 
@@ -570,10 +572,12 @@ const getDB = async () => {
       jobsCache = jobs;
     }
 
+    isFirestoreActive = true;
     dbCache = { machines, jobs, customers, feedbacks };
     return dbCache;
   } catch (e) {
     console.error('Error reading Firestore, falling back to local file:', e);
+    isFirestoreActive = false;
     const localDB = readLocalDB();
     dbCache = localDB;
     return localDB;
@@ -797,7 +801,7 @@ app.get('/api/db', async (req, res) => {
   res.json({
     ...dbData,
     activeUsers: activeUsersList,
-    isCloud
+    isCloud: isCloud && isFirestoreActive
   });
 });
 
